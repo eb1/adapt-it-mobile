@@ -43,10 +43,16 @@
     "gulp": "^3.9.1",
     "gulp-typescript": "^2.11.0",
     "path": "^0.12.7",
-    "plist": "^1.2.0"
+    "plist": "^1.2.0",
+    "snyk": "^1.25.2"
   },
   "bugs": {
     "url": "https://github.com/adapt-it/adapt-it-mobile/issues"
   },
-  "homepage": "https://github.com/adapt-it/adapt-it-mobile"
+  "homepage": "https://github.com/adapt-it/adapt-it-mobile",
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
+  },
+  "snyk": true
 }
