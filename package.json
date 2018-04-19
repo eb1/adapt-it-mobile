@@ -45,7 +45,7 @@
     "gulp": "^3.9.1",
     "gulp-typescript": "^2.11.0",
     "path": "^0.12.7",
-    "plist": "^1.2.0"
+    "plist": "^3.0.1"
   },
   "bugs": {
     "url": "https://github.com/adapt-it/adapt-it-mobile/issues"
