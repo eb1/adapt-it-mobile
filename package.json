@@ -47,7 +47,8 @@
     "gulp-typescript": "^2.11.0",
     "path": "^0.12.7",
     "phonegap-plugin-mobile-accessibility": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
-    "plist": "^1.2.0"
+    "plist": "^1.2.0",
+    "snyk": "^1.88.1"
   },
   "bugs": {
     "url": "https://github.com/adapt-it/adapt-it-mobile/issues"
@@ -78,5 +79,10 @@
       "cordova-clipboard": {}
     },
     "platforms": []
-  }
+  },
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
+  },
+  "snyk": true
 }
