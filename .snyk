@@ -1,5 +1,5 @@
 # Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
-version: v1.7.1
+version: v1.13.3
 # ignores vulnerabilities until expiry date; change duration by modifying expiry date
 ignore:
   'npm:brace-expansion:20170302':
@@ -23,4 +23,10 @@ ignore:
     - cordova-ios > ios-sim > simctl > shelljs:
         reason: None given
         expires: '2017-07-31T00:37:54.415Z'
-patch: {}
+# patches apply the minimum changes required to fix a vulnerability
+patch:
+  'npm:lodash:20180130':
+    - cordova-lib > cordova-common > plist > xmlbuilder > lodash:
+        patched: '2019-04-18T05:03:06.186Z'
+    - cordova-lib > cordova-fetch > cordova-common > plist > xmlbuilder > lodash:
+        patched: '2019-04-18T05:03:06.186Z'
