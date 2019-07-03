@@ -42,7 +42,8 @@
     "cordova-plugin-x-socialsharing": "5.4.0",
     "cordova-sqlite-evcore-extbuild-free": "^0.9.8",
     "cordova.plugins.diagnostic": "^4.0.10",
-    "phonegap-plugin-mobile-accessibility": "https://github.com/phonegap/phonegap-mobile-accessibility.git"
+    "phonegap-plugin-mobile-accessibility": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
+    "snyk": "^1.189.0"
   },
   "bugs": {
     "url": "https://github.com/adapt-it/adapt-it-mobile/issues"
@@ -76,5 +77,10 @@
       "cordova-plugin-keyboard": {}
     },
     "platforms": []
-  }
+  },
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
+  },
+  "snyk": true
 }
