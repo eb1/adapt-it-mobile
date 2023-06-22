@@ -37,13 +37,13 @@
     "plist": "^3.0.1"
   },
   "dependencies": {
-    "cordova-lib": "^10.1.0",
+    "cordova-lib": "^11.0.0",
     "cordova-plugin-fonts": "^0.6.5",
     "cordova-plugin-splashscreen": "^6.0.0",
     "cordova-plugin-statusbar": "^2.4.3",
     "crypto-randomuuid": "^1.0.0",
     "gulp-uglify": "^3.0.2",
-    "npx": "^3.0.0",
+    "npx": "^9.0.0",
     "phonegap-plugin-mobile-accessibility": "https://github.com/phonegap/phonegap-mobile-accessibility.git"
   },
   "bugs": {
