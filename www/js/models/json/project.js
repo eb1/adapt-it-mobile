@@ -257,16 +257,6 @@ define(function (require) {
             return "http://localhost:3042/projects";
         },
 
-        // parse: function (data) {
-        //     if (_.isObject(data.results)) {
-        //         console.log("Parsing project data results: " + data.results);
-        //         return data.results;
-        //     } else {
-        //         console.log("Parsing project data: " + data);
-        //         return data;
-        //     }
-        // },
-
         fetch: function(options) {
 
             console.log("Fetching project"); 
@@ -274,15 +264,6 @@ define(function (require) {
             //Call Backbone's fetch
             return Backbone.Collection.prototype.fetch.call(this, options);
         }
-
-        // sync: function (method, model, options) {
-        //     if (method === "read") {
-        //         // special case for sql - remove the blank name property for json
-        //         if (options.data.hasOwnProperty('name') && options.data.name === "") {
-        //             delete options.data.name;
-        //         }
-        //     }
-        // }
 
     });
 

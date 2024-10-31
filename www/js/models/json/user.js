@@ -40,7 +40,7 @@ define(function (require) {
     UserCollection = Backbone.Collection.extend({
         model: User,
         url: "/users"
-    });
+    }),
 
     // Represents a placeholder in a project (book, chapter, and source phrase location). Can be more than 1 per user.
     Bookmark = Backbone.Model.extend({
@@ -52,13 +52,13 @@ define(function (require) {
             bookid: 0,
             chapterid: 0,
             spid: ""
-        },
-    });
+        }
+    }),
 
     BookmarkCollection = Backbone.Collection.extend({
         model: Bookmark,
         url: "/bookmarks"
-    })
+    });
 
     return {
         User: User,

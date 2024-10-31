@@ -8,7 +8,7 @@ define(function (require) {
         Backbone    = require('backbone'),
         i18n        = require('i18n'),
         projects    = [],
-        CURRSCHEMA  = 4,
+        CURRSCHEMA  = 5,
         
         // ---
         // STATIC METHODS
@@ -338,6 +338,39 @@ define(function (require) {
                         // exception thrown -- assume table doesn't exist
                         console.log("upgradeSchema: error: " + err.message);
                     });
+                }, function (e) {
+                    console.log("upgradeSchema error: " + e.message);
+                }, function () {
+                    deferred.resolve();
+                });
+            }
+            if (fromVersion === 4) {
+                // AIM version 1.18 (user, bookmark tables)
+                window.Application.db.transaction(function (tx) {
+                    var theSQL = "";
+                    // version table exists (see logic above), but is at version 4; update it here
+                    tx.executeSql('UPDATE version SET schemaver=? WHERE id=?;', [CURRSCHEMA, 1], function (tx, res) {
+                        console.log("version table updated -- schema version: " + CURRSCHEMA);
+                    }, function (err) {
+                        console.log("failed to set the version schema: " + err);
+                    });
+                    // update changes for 1.18
+                    // 2 new tables -- user and bookmark
+                    theSQL = 'CREATE TABLE user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("UpgradeSchema() - user table created");                        
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+                    theSQL = 'CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, bookname text, bookid integer, chapterid integer, spid text);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("UpgradeSchema() - bookmark table created");                        
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+
                 }, function (e) {
                     console.log("upgradeSchema error: " + e.message);
                 }, function () {
@@ -950,7 +983,6 @@ define(function (require) {
                     break;
                 }
             }
-
         }),
 
         ProjectCollection = Backbone.Collection.extend({

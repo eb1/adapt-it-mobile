@@ -12,6 +12,7 @@ define(function (require) {
     var $       = require('jquery'),
     Backbone    = require('backbone'),
     users = [],
+    bookmarks = [],
     wordSpacingEnum = {
         NONE: 0,
         SMALL: 1,
@@ -37,7 +38,16 @@ define(function (require) {
         deferred.resolve(results);
         return deferred.promise();
     },
-    
+
+    findByBookmarkId = function (searchKey) {
+        var deferred = $.Deferred();
+        var results = bookmarks.filter(function (element) {
+            return element.attributes.bookmarkid === searchKey;
+        });
+        deferred.resolve(results);
+        return deferred.promise();
+    },
+
     User = Backbone.Model.extend({
         defaults: {
             username: "",
@@ -118,7 +128,7 @@ define(function (require) {
                     break;
             }
         }
-    });
+    }),
 
     UserCollection = Backbone.Collection.extend({
         model: User,
@@ -229,7 +239,7 @@ define(function (require) {
                 }
             }
         }
-    });
+    }),
 
     // Represents a placeholder in a project (book, chapter, and source phrase location). Can be more than 1 per user.
     Bookmark = Backbone.Model.extend({
@@ -304,11 +314,106 @@ define(function (require) {
                 break;
             }
         }
-    });
+    }),
 
     BookmarkCollection = Backbone.Collection.extend({
         model: Bookmark,
-        url: "/bookmarks"
+
+        resetFromDB: function () {
+            var deferred = $.Deferred(),
+                i = 0,
+                len = 0;
+    
+            window.Application.db.transaction(function (tx) {
+                tx.executeSql('CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, bookname text, bookid integer, chapterid integer, spid text);');
+                tx.executeSql("SELECT * from bookmark;", [], function (tx, res) {
+                    for (i = 0, len = res.rows.length; i < len; ++i) {
+                        // add the bookmark
+                        var bookmark = new Bookmark();
+                        bookmark.off("change");
+                        bookmark.set(res.rows.item(i));
+                        bookmarks.push(bookmark);
+                        bookmark.on("change", bookmark.save, bookmark);
+                    }
+                    console.log("SELECT ok: " + res.rows.length + " bookmark items");
+                });
+            }, function (e) {
+                deferred.reject(e);
+            }, function () {
+                deferred.resolve();
+            });
+            return deferred.promise();
+        },
+        
+        initialize: function () {
+            return this.resetFromDB();
+        },
+
+        // Removes all bookmarks from the collection (and database)
+        clearAll: function () {
+            window.Application.db.transaction(function (tx) {
+                tx.executeSql('DELETE from bookmark;'); // clear out the table
+                bookmarks.length = 0; // delete local copy
+            }, function (err) {
+                console.log("DELETE error: " + err.message);
+            });
+        },
+
+        sync: function (method, model, options) {
+            if (method === "read") {
+                if (options.data.hasOwnProperty('bookmarkid')) {
+                    findByBookmarkId(options.data.bookmarkid).done(function (data) {
+                        options.success(data);
+                    });
+                } else if (options.data.hasOwnProperty('projectid')) {
+                    var deferred = $.Deferred();
+                    var username = options.data.projectid;
+                    var len = 0;
+                    var i = 0;
+                    var retValue = null;
+                    // special case -- empty name query ==> reset local copy so we force a retrieve
+                    // from the database
+                    if (projectid === "") {
+                        bookmarks.length = 0;
+                    }
+                    var results = users.filter(function (element) {
+                        return element.attributes.projectid === projectid;
+                    });
+                    if (results.length === 0) {
+                        // not in collection -- retrieve them from the db
+                        window.Application.db.transaction(function (tx) {
+                            tx.executeSql("SELECT * FROM bookmark;", [], function (tx, res) {
+                                var tmpString = "";
+                                // populate the chapter collection with the query results
+                                for (i = 0, len = res.rows.length; i < len; ++i) {
+                                    // add the book
+                                    var bookmark = new Bookmark();
+                                    bookmark.off("change");
+                                    bookmark.set(res.rows.item(i));
+                                    bookmarks.push(bookmark);
+                                    bookmark.on("change", bookmark.save, bookmark);
+                                }
+                                // return the filtered results (now that we have them)
+                                retValue = users.filter(function (element) {
+                                    return element.attributes.projectid === projectid;
+                                });
+                                options.success(retValue);
+                                deferred.resolve(retValue);
+                            });
+                        }, function (e) {
+                            options.error();
+                            deferred.reject(e);
+                        });
+                    } else {
+                        // results already in collection -- return them
+                        options.success(results);
+                        deferred.resolve(results);
+                    }
+                    // return the promise
+                    return deferred.promise();
+                }
+            }
+        }
     });
 
 
