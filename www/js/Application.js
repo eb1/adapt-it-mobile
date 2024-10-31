@@ -335,6 +335,7 @@ define(function (require) {
                 // new project wizard. These objects with no id defined are only in memory;
                 // once the source and target language are defined, an id is set and
                 // the project is saved in the device's localStorage.
+                // $.when(this.ProjectList.fetch()).done(function () {
                 $.when(this.ProjectList.fetch({reset: true, data: {name: ""}})).done(function () {
                     window.Application.ProjectList.each(function (model, index) {
                         if (model.get('projectid') === "") {
@@ -347,10 +348,15 @@ define(function (require) {
                         window.Application.ProjectList.remove(models);
                     }
                     if (window.Application.currentProject === null) {
+                        console.log("Home() - No current project set");
                         // check to see if we saved a current project
                         if (localStorage.getItem("CurrentProjectID")) {
+                            console.log("Attempting to use CurrentProjectID from local storage");
                             window.Application.currentProject = window.Application.ProjectList.where({projectid: localStorage.getItem("CurrentProjectID")})[0];
-                        } else {
+                        }
+                        if (window.Application.currentProject === null) {
+                            // project list was a dud. Set to the first item in the list if we can
+                            console.log("No localStorage, or attempt to set failed. Trying the first item in the project list (if there is one)");
                             // pick the first project in the list, if there is one
                             if (window.Application.ProjectList.length > 0) {
                                 window.Application.currentProject = window.Application.ProjectList.at(0);

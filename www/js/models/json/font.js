@@ -9,15 +9,13 @@ define(function (require) {
 
         Font = Backbone.Model.extend({
 
-            urlRoot: "http://localhost:3000/font"
-
         }),
 
         FontCollection = Backbone.Collection.extend({
 
             model: Font,
 
-            url: "http://localhost:3000/fonts"
+            url: "/fonts"
 
         });
 
