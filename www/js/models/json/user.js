@@ -22,7 +22,8 @@ define(function (require) {
             userid: "",
             // password: "",
             roles: [],
-            // user preferences (in local storage for AIM 1.x)
+            bookmarks: [],
+            // editor preferences (in local storage for pre-v1.18)
             copysource: 0,
             wrapusfm: 0,
             stopatboundaries: 0,
@@ -31,7 +32,6 @@ define(function (require) {
             defaultfttarget: 0,
             uilang: 0,
             darkmode: 1,
-            bookmarks: [],
             wordspacing: wordSpacingEnum.NORMAL
         },
 

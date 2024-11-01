@@ -358,14 +358,14 @@ define(function (require) {
                     // 2 new tables -- user and bookmark
                     theSQL = 'CREATE TABLE user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
                     tx.executeSql(theSQL, [], function (tx, res) {
-                        console.log("UpgradeSchema() - user table created");                        
+                        console.log("upgradeSchema() - user table created");
                     }, function (err) {
                         // exception thrown -- assume table doesn't exist
                         console.log("upgradeSchema: error: " + err.message);
                     });
                     theSQL = 'CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, bookname text, bookid integer, chapterid integer, spid text);';
                     tx.executeSql(theSQL, [], function (tx, res) {
-                        console.log("UpgradeSchema() - bookmark table created");                        
+                        console.log("upgradeSchema() - bookmark table created");
                     }, function (err) {
                         // exception thrown -- assume table doesn't exist
                         console.log("upgradeSchema: error: " + err.message);

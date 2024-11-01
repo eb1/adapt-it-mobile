@@ -55,6 +55,8 @@ define(function (require) {
             // email: "",
             // password: "",
             roles: [],
+            bookmarks: [],
+            // editor preferences (these were in local storage for pre-v1.18)
             copysource: 0,
             wrapusfm: 0,
             stopatboundaries: 0,
@@ -63,7 +65,6 @@ define(function (require) {
             defaultfttarget: 0,
             uilang: 0,
             darkmode: 1,
-            bookmarks: [],
             wordspacing: wordSpacingEnum.NORMAL
         },
         initialize: function () {
