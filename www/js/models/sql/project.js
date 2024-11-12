@@ -356,7 +356,7 @@ define(function (require) {
                     });
                     // update changes for 1.18
                     // 2 new tables -- user and bookmark
-                    theSQL = 'CREATE TABLE user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
+                    theSQL = 'CREATE TABLE IF NOT EXISTS user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
                     tx.executeSql(theSQL, [], function (tx, res) {
                         console.log("upgradeSchema() - user table created");
                     }, function (err) {
@@ -387,12 +387,14 @@ define(function (require) {
         checkSchema = function () {
             var deferred = $.Deferred();
             var theSQL = "";
-            console.log("checkSchema: entry");
-            if (typeof device === "undefined") {
-                return;
+            console.log("checkSchema: entry, device:" + device);
+            if (device === null || typeof device === "undefined") {
+                deferred.reject("checkSchema(): reject - undefined device.");
+                return deferred.promise();            
             }
             if (!window.Application.db) {
-                deferred.reject("checkSchema(): Database not found.");
+                deferred.reject("checkSchema(): reject - Database not found.");
+                return deferred.promise();            
             }
             window.Application.db.transaction(function (tx) {
                 // Check 1: is there a version table? 
@@ -402,6 +404,7 @@ define(function (require) {
                 } else {
                     theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'version\';";
                 }
+                console.log("SQL: " + theSQL);
                 tx.executeSql(theSQL, [], function (tx, res) {
                     if (res.rows.length > 0) {
                         console.log("checkSchema: version table exists");

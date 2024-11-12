@@ -55,7 +55,7 @@ require.config({
     },
     shim: {
         'featherlightGallery': {
-            deps: ['jquery-hammerjs', 'featherlight', 'jquery'],
+            deps: ['featherlight', 'jquery'],
             exports: 'featherlightGallery'
         },
         'handlebars': {
@@ -79,7 +79,7 @@ require.config({
         },
         'backbone': {
 //            deps: ['underscore', 'jquery'],
-            deps: ['jquery-hammerjs', 'underscore-min', 'jquery'],
+            deps: ['jquery-hammerjs', 'underscore-min'],
             exports: 'Backbone'
         },
         'underscore': {

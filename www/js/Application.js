@@ -19,6 +19,7 @@ define(function (require) {
         bookModel       = require('app/models/book'),
         spModel         = require('app/models/sourcephrase'),
         kbModels        = require('app/models/targetunit'),
+        userModels      = require('app/models/user'),
         AppRouter       = require('app/router'),
         PageSlider      = require('app/utils/pageslider'),
         slider          = new PageSlider($('body')),
@@ -77,6 +78,7 @@ define(function (require) {
             searchList: null,
             searchIndex: 0,
             currentProject: null,
+            user: null,
             localURLs: [],
             version: "1.17.3", // appended with Android / iOS build info
             AndroidBuild: "62", // (was milestone release #)
@@ -207,20 +209,22 @@ define(function (require) {
                         };                        
                     } else if (device.platform === "iOS") {
                         // iOS -- Documents dir: db is visible to iTunes, backed up by iCloud
-                        this.db = window.sqlitePlugin.openDatabase({name: DB_NAME, iosDatabaseLocation: 'Documents'});
-                        this.onInitDB();
-
+                        // Attempt to create / open our AIM database now
+                        this.db = window.sqlitePlugin.openDatabase({name: DB_NAME, iosDatabaseLocation: 'Documents'}, function(db) {
+                            console.log("ios db open ok, checking schema");
+                            window.Application.checkDBSchema().then(window.Application.onInitDB());
+                        });
                     } else if (device.platform === "Android") {
                         // Android -- scoped storage wonkiness introduced in stages starting with API 30
                         // first check the data directory, then check the "default" location
                         db_dir = cordova.file.dataDirectory;
                         console.log("db_dir: " + db_dir);
-                        // // now attempt to get the directory
+                        // now attempt to get the directory
                         window.resolveLocalFileSystemURL(db_dir, function (directoryEntry) {
                             console.log("Got directoryEntry. Attempting to create / open AIM DB at: " + directoryEntry.nativeURL);
                             // Attempt to create / open our AIM database now
                             window.Application.db = window.sqlitePlugin.openDatabase({name: DB_NAME, androidDatabaseLocation: directoryEntry.nativeURL}, function(db) {
-                                window.Application.checkDBSchema().then(window.Application.onInitDB()); // Android only (iOS calls directly)
+                                window.Application.checkDBSchema().then(window.Application.onInitDB());
                             }, function (err) {
                                 console.log("Open database ERROR: " + JSON.stringify(err));
                             });
@@ -266,6 +270,7 @@ define(function (require) {
                         window.Application.ChapterList = new chapterModel.ChapterCollection();
                         window.Application.kbList = new kbModels.TargetUnitCollection();
                         window.Application.spList = new spModel.SourcePhraseCollection();
+                        window.Application.bookmarkList = new userModels.BookmarkCollection();
                         // Note on these collections:
                         // The ProjectList is populated at startup in home() below; if there is a current project,
                         // the books, chapters, and KB are loaded for the current project in home() as well.   
@@ -283,6 +288,8 @@ define(function (require) {
                 this.ChapterList = null;
                 this.spList = null;
                 this.kbList = null;
+                this.bookmarkList = null;
+                this.user = null;
                 
                 // did the user specify a custom language?
                 if (localStorage.getItem("UILang")) {
@@ -321,6 +328,7 @@ define(function (require) {
             
             checkDBSchema: function () {
                 // verify we're on the latest DB schema (upgrade if necessary)
+                console.log("checkDBSchema: entry");
                 return projModel.checkSchema();
             },
 
@@ -367,10 +375,10 @@ define(function (require) {
                     }
                     // Is there a current project?
                     if ((window.Application.currentProject !== undefined) && (window.Application.currentProject !== null)) {
-                        // there's a "real" current project -- load the books, chapter, and KB
+                        // there's a "real" current project -- load the books, chapter
+                        console.log("currentProject: " + window.Application.currentProject.get("projectid"));
                         window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
                         window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
-                        window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
                     }
                     // Did another task launch us (i.e., did our handleOpenURL() from main.js
                     // get called)? If so, pull out the URL and process the resulting file
@@ -391,6 +399,7 @@ define(function (require) {
                         }
                     } else {
                         // No pending import requests -- display the home view
+                        console.log("creating home view");
                         homeView = new HomeViews.HomeView({model: window.Application.currentProject});
                         homeView.delegateEvents();
                         window.Application.main.show(homeView);

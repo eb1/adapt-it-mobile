@@ -139,10 +139,38 @@ define(function (require) {
         // project (window.Application.currentProject, initialized in application.js).
         HomeView = Marionette.ItemView.extend({
             template: Handlebars.compile(tplHome),
-            
+
             onShow: function () {
-                books = window.Application.BookList;
-                books.fetch({reset: true, data: {name: ""}});
+                console.log("HomeView::onShow() entry");
+                // first, make sure our kblist has current info so our list of available options is accurate
+                window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}}).done(function() {
+                    var projectid = window.Application.currentProject.get("projectid");
+                    console.log("onShow() - kblist fetch callback");
+                    // If there is a current project, Application.Booklist should have the list of books for that project. 
+                    books = window.Application.BookList;
+                    if (books.length > 0) {
+                        // There is at least 1 book imported into the project. 
+                        // Show the search and adapt links, and optionally the export link (if there's something in the KB)
+                        var tuCount = window.Application.kbList.length;
+                        var projectid = window.Application.currentProject.get('projectid');
+                        var str = "";
+                        if (tuCount > 0) {
+                            // at least some translation done -- show the export link
+                            str += '<li class="topcoat-list__item"><a class="big-link" id="export" title="' + i18n.t("view.lblExport") + '" href="#export/' + projectid + '"><span class="btn-export"></span><span id="lblExport">' + i18n.t('view.lblExport') + '</span><span class="chevron"></span></a></li>';
+                        }
+                        // show the search and adapt links 
+                        str += '<li class="topcoat-list__item"><a class="big-link" id="search" title="' + i18n.t('view.dscSearch') + '" href="#search/' + projectid + '"><span class="btn-book"></span>' + i18n.t('view.lblSearch') + '<span class="chevron"></span></a></li>';
+                        str += '<li class="topcoat-list__item">Adapt or Something</li>';
+                        console.log(str);
+                        // if (window.Application) {
+    //  <li class="topcoat-list__item"><a class="big-link" id="adapt" title="{{ t 'view.dscAdapt'}}" href="#adapt/{{this.lastAdaptedChapterID}}"><span class="btn-adapt"></span><span id="lblAdapt">{{#if this.lastAdaptedName.length}}{{this.lastAdaptedName}}{{else}}{{ t 'view.lblAdapt'}}{{/if}}</span><span class="chevron"></span></a></li> -->
+    
+                        // }
+                        $("#ProjectItems").append(str);
+                    }
+                        
+                });
+
                 clickCount = 0;
             },
 
