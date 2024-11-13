@@ -323,13 +323,91 @@ define(function (require) {
             
             onStart: function (app, options) {
                 // check the database schema now that we've created / opened it
-                // this.checkDBSchema();
             },
             
             checkDBSchema: function () {
                 // verify we're on the latest DB schema (upgrade if necessary)
                 console.log("checkDBSchema: entry");
                 return projModel.checkSchema();
+            },
+
+            // populate the Application.user and Application.bookmarkList,
+            // creating them if we're upgrading from a previous release
+            setUserAndBookmarks: function () {
+                var deferred = $.Deferred();
+
+                // Each AIM instance has a local user associated with the project(s) in the local DB
+                console.log("setUserAndBookmarks() - entry");
+                var userList = new userModels.UserCollection();
+                userList.fetch({reset: true, data: {username:""}}).done(function() {
+                    if (window.Application.user) {
+                        console.log("user already set - skipping");
+                    } else {
+                        // no local user set -- see if there's an existing user in the DB for us
+                        if (userList.length === 0) {
+                            console.log("No local user - creating");
+                            var userid = window.Application.generateUUID();
+                            var localUser = new userModels.User({
+                                username: "LocalUser",
+                                userid: userid,
+                                roles: [],
+                                bookmarks: [],
+                                copysource: 0,
+                                wrapusfm: 0,
+                                stopatboundaries: 0,
+                                alloweditblanksp: 0,
+                                showtranslationchecks: 0,
+                                defaultfttarget: 0,
+                                uilang: 0,
+                                darkmode: 1,
+                                wordspacing: 2
+                            });
+                            // save the user to the DB
+                            localUser.save();
+                            window.Application.user = localUser;
+                        } else {
+                            // set local user
+                            window.Application.user = userList.at(0);
+                        }
+    
+                    }
+                    console.log("setUserAndBookmarks() - user: " + window.Application.user.toString());
+
+                    // verify / update the bookmark list
+                    if (window.Application.user.get("bookmarks").length === 0) {
+                        console.log("setUserAndBookmarks() - user has no bookmarks set; setting for each project (if there are any)");
+                        var bookmarks = window.Application.user.get("bookmarks"); // s/b empty array of bookmarkids, not collection
+                        window.Application.ProjectList.each(function (model, index) {
+                            // If we're here, we're likely upgrading from a previous version of AIM, and the project _should_
+                            // have the info to populate this bookmark
+                            var bookmarkid = window.Application.generateUUID();
+                            var newBookmark = new userModels.Bookmark({
+                                bookmarkid: bookmarkid,
+                                projectid: model.get('projectid'),
+                                bookname: model.get('lastAdaptedName'),
+                                bookid: model.get('lastAdaptedBookID'),
+                                chapterid: model.get('lastAdaptedChapterID'),
+                                spid: model.get('lastAdaptedSPID')
+                            });
+                            // save and add to the collection
+                            newBookmark.save();
+                            window.Application.bookmarkList.add(newBookmark);
+                            // add this to the user's bookmarkid array
+                            bookmarks.push(bookmarkid);                               
+                        });
+                        // only update if we added bookmarks (if the length is 0, there are no projects)
+                        if (bookmarks.length > 0) {
+                            // update the user's bookmarks property
+                            window.Application.user.set("bookmarks", bookmarks);
+                        }
+                    } else {
+                        console.log("setUserAndBookmarks() - user bookmarks set");
+                    }
+                    // done populating user/bookmarks
+                    deferred.resolve();
+                });
+
+                return deferred.promise();
             },
 
             // -----------
@@ -344,7 +422,7 @@ define(function (require) {
                 // once the source and target language are defined, an id is set and
                 // the project is saved in the device's localStorage.
                 // $.when(this.ProjectList.fetch()).done(function () {
-                $.when(this.ProjectList.fetch({reset: true, data: {name: ""}})).done(function () {
+                this.ProjectList.fetch({reset: true, data: {name: ""}}).then(window.Application.setUserAndBookmarks()).then(function () {
                     window.Application.ProjectList.each(function (model, index) {
                         if (model.get('projectid') === "") {
                             // empty project -- mark for removal

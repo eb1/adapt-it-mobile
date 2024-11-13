@@ -238,7 +238,11 @@ define(function (require) {
                                     }
                                     // return the filtered results (now that we have them)
                                     retValue = books.filter(function (element) {
-                                        return element.attributes.name.toLowerCase().indexOf(name.toLowerCase()) > -1;
+                                        if (name.length > 0) {
+                                            return element.attributes.name.toLowerCase().indexOf(name.toLowerCase()) > -1;
+                                        } else {
+                                            return true;
+                                        }
                                     });
                                     options.success(retValue);
                                     deferred.resolve(retValue);

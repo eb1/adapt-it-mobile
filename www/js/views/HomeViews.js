@@ -143,11 +143,13 @@ define(function (require) {
             onShow: function () {
                 console.log("HomeView::onShow() entry");
                 // first, make sure our kblist has current info so our list of available options is accurate
+                
                 window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}}).done(function() {
                     var projectid = window.Application.currentProject.get("projectid");
                     console.log("onShow() - kblist fetch callback");
                     // If there is a current project, Application.Booklist should have the list of books for that project. 
                     books = window.Application.BookList;
+                    console.log("book count for current project: " + books.length);
                     if (books.length > 0) {
                         // There is at least 1 book imported into the project. 
                         // Show the search and adapt links, and optionally the export link (if there's something in the KB)
@@ -160,12 +162,22 @@ define(function (require) {
                         }
                         // show the search and adapt links 
                         str += '<li class="topcoat-list__item"><a class="big-link" id="search" title="' + i18n.t('view.dscSearch') + '" href="#search/' + projectid + '"><span class="btn-book"></span>' + i18n.t('view.lblSearch') + '<span class="chevron"></span></a></li>';
-                        str += '<li class="topcoat-list__item">Adapt or Something</li>';
                         console.log(str);
-                        // if (window.Application) {
-    //  <li class="topcoat-list__item"><a class="big-link" id="adapt" title="{{ t 'view.dscAdapt'}}" href="#adapt/{{this.lastAdaptedChapterID}}"><span class="btn-adapt"></span><span id="lblAdapt">{{#if this.lastAdaptedName.length}}{{this.lastAdaptedName}}{{else}}{{ t 'view.lblAdapt'}}{{/if}}</span><span class="chevron"></span></a></li> -->
-    
-                        // }
+                        // build the adapt link
+                        var arr = window.Application.bookmarkList.where({projectid: projectid});
+                        console.log("onShow() - matching bookmark count: " + arr.length);
+                        // filtered bookmark array could have items belonging to multiple users -- find the one associated with our user
+                        arr.forEach(function (model) {
+                            var bookmarkid = window.Application.user.get("bookmarks").find(model.get("bookmarkid"));
+                            if (bookmarkid) {
+                                // found it -- populate the Adapt link
+                                str += '<li class="topcoat-list__item"><a class="big-link" id="adapt" title="' + i18n.t('view.dscAdapt') + '"';
+                                str += '#adapt/' + model.get("chapterid") + '"><span class="btn-adapt"></span><span id="lblAdapt">';
+                                str += (model.get("bookname").length > 0) ? model.get("bookname") : i18n.t('view.lblAdapt');
+                                str += '</span><span class="chevron"></span></a></li>';
+                            }
+                        })
+                        // done building our action links -- append them to the html list
                         $("#ProjectItems").append(str);
                     }
                         

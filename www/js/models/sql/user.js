@@ -89,10 +89,10 @@ define(function (require) {
             var attributes = this.attributes;
             var sql = "INSERT INTO user (username, userid, roles, copysource, wrapusfm, stopatboundaries, alloweditblanksp, showtranslationchecks, defaultfttarget, uilang, darkmode, bookmarks, wordspacing) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);";
             window.Application.db.transaction(function (tx) {
-                tx.executeSql(sql, [attributes.username, attributes.userid, attributes.roles, attributes.copysource, attributes.wrapusfm, attributes.stopatboundaries, attributes.alloweditblanksp, attributes.showtranslationchecks, attributes.defaultfttarget, attributes.uilang, attributes.darkmode, attributes.bookmarks, attributes.wordspacing], function (tx, res) {
-                    console.log("INSERT ok: " + res.toString());
+                tx.executeSql(sql, [attributes.username, attributes.userid, JSON.stringify(attributes.roles), attributes.copysource, attributes.wrapusfm, attributes.stopatboundaries, attributes.alloweditblanksp, attributes.showtranslationchecks, attributes.defaultfttarget, attributes.uilang, attributes.darkmode, JSON.stringify(attributes.bookmarks), attributes.wordspacing], function (tx, res) {
+                    console.log("user INSERT ok: " + res.toString());
                 }, function (tx, err) {
-                    console.log("INSERT (create) error: " + err.message);
+                    console.log("user INSERT (create) error: " + err.message);
                 });
             });
         },
@@ -100,10 +100,10 @@ define(function (require) {
             var attributes = this.attributes;
             var sql = "UPDATE user SET username=?, roles=? copysource=?, wrapusfm=?, stopatboundaries=?, alloweditblanksp=?, showtranslationchecks=?, defaultfttarget=?, uilang=?, darkmode=?, bookmarks=?, wordspacing=? WHERE userid=?;";
             window.Application.db.transaction(function (tx) {
-                tx.executeSql(sql, [attributes.username, attributes.roles, attributes.copysource, attributes.wrapusfm, attributes.stopatboundaries, attributes.alloweditblanksp, attributes.showtranslationchecks, attributes.defaultfttarget, attributes.uilang, attributes.darkmode, attributes.bookmarks, attributes.wordspacing, attributes.userid], function (tx, res) {
-                    console.log("UPDATE ok: " + res.toString());
+                tx.executeSql(sql, [attributes.username,JSON.stringify(attributes.roles), attributes.copysource, attributes.wrapusfm, attributes.stopatboundaries, attributes.alloweditblanksp, attributes.showtranslationchecks, attributes.defaultfttarget, attributes.uilang, attributes.darkmode, JSON.stringify(attributes.bookmarks), attributes.wordspacing, attributes.userid], function (tx, res) {
+                    console.log("user UPDATE ok: " + res.toString());
                 }, function (tx, err) {
-                    console.log("UPDATE error: " + err.message);
+                    console.log("user UPDATE error: " + err.message);
                 });
             });
         },
@@ -121,9 +121,12 @@ define(function (require) {
                     break;
                         
                 case 'update':
-                    model.update();
-                    break;
-                        
+                    if (this.attributes.userid === "") {
+                        model.create();
+                    } else {
+                        model.update();
+                    }
+                    break;                        
                 case 'delete':
                     model.destroy(options);
                     break;
@@ -150,9 +153,13 @@ define(function (require) {
                         user.set(res.rows.item(i));
                         // convert text strings back into an array objects
                         tmpString = user.get('roles');
-                        user.set('roles', JSON.parse(tmpString));
+                        if (tmpString.length > 0) {
+                            user.set('roles', JSON.parse(tmpString));
+                        }
                         tmpString = user.get('bookmarks');
-                        user.set('bookmarks', JSON.parse(tmpString));
+                        if (tmpString.length > 0) {
+                            user.set('bookmarks', JSON.parse(tmpString));
+                        }
                         users.push(user);
                         user.on("change", user.save, user);
                     }
@@ -213,15 +220,23 @@ define(function (require) {
                                     user.set(res.rows.item(i));
                                     // convert text strings back into an array objects
                                     tmpString = user.get('roles');
-                                    user.set('roles', JSON.parse(tmpString));
+                                    if (tmpString.length > 0) {
+                                        user.set('roles', JSON.parse(tmpString));
+                                    }
                                     tmpString = user.get('bookmarks');
-                                    user.set('bookmarks', JSON.parse(tmpString));
+                                    if (tmpString.length > 0) {
+                                        user.set('bookmarks', JSON.parse(tmpString));                                        
+                                    }
                                     users.push(user);
                                     user.on("change", user.save, user);
                                 }
                                 // return the filtered results (now that we have them)
                                 retValue = users.filter(function (element) {
-                                    return element.attributes.username === username;
+                                    if (username.length > 0) {
+                                        return element.attributes.username === username;
+                                    } else {
+                                        return true; // no string - clear local collection and return all results
+                                    }
                                 });
                                 options.success(retValue);
                                 deferred.resolve(retValue);
@@ -261,12 +276,12 @@ define(function (require) {
             var obj = this;
             window.Application.db.transaction(function (tx) {
                 tx.executeSql("SELECT * from bookmark WHERE bookmarkid=?;", [obj.attributes.bookmarkid], function (tx, res) {
-                    console.log("SELECT ok: " + res.rows);
+                    console.log("bookmark SELECT ok: " + res.rows);
                     obj.set(res.rows.item(0));
                     deferred.resolve(obj);
                 });
             }, function (err) {
-                console.log("SELECT error: " + err.message);
+                console.log("bookmark SELECT error: " + err.message);
                 deferred.reject(err);
             });
             return deferred.promise();
@@ -276,9 +291,9 @@ define(function (require) {
             var sql = "INSERT INTO bookmark (bookmarkid, bookname, bookid, chapterid, spid) VALUES (?,?,?,?,?);";
             window.Application.db.transaction(function (tx) {
                 tx.executeSql(sql, [attributes.bookmarkid, attributes.bookname, attributes.bookid, attributes.chapterid, attributes.spid], function (tx, res) {
-                    console.log("INSERT ok: " + res.toString());
+                    console.log("bookmark INSERT ok: " + res.toString());
                 }, function (tx, err) {
-                    console.log("INSERT (create) error: " + err.message);
+                    console.log("bookmark INSERT (create) error: " + err.message);
                 });
             });
         },
@@ -288,9 +303,9 @@ define(function (require) {
             window.Application.db.transaction(function (tx) {
                 //JSON.stringify(attributes.chapters)
                 tx.executeSql(sql, [attributes.bookname, attributes.bookid, attributes.chapterid, attributes.spid, attributes.bookmarkid], function (tx, res) {
-                    console.log("UPDATE ok: " + res.toString());
+                    console.log("bookmark UPDATE ok: " + res.toString());
                 }, function (tx, err) {
-                    console.log("UPDATE error: " + err.message);
+                    console.log("bookmark UPDATE error: " + err.message);
                 });
             });
         },
@@ -298,21 +313,26 @@ define(function (require) {
         sync: function (method, model, options) {
 
             switch (method) {
-            case 'create':
-                options.success(model);
-                break;
-                    
-            case 'read':
-                options.success(data);
-                break;
-                    
-            case 'update':
-                options.success(model);
-                break;
-                    
-            case 'delete':
-                options.success(model);
-                break;
+                case 'create':
+                    model.create();
+                    break;
+                        
+                case 'read':
+                    findByBookmarkId(this.bookmarkid).done(function (data) {
+                        options.success(data);
+                    });
+                    break;
+                        
+                case 'update':
+                    if (this.attributes.bookmarkid === "") {
+                        model.create();
+                    } else {
+                        model.update();
+                    }
+                    break;                        
+                case 'delete':
+                    model.destroy(options);
+                    break;
             }
         }
     }),
@@ -377,13 +397,14 @@ define(function (require) {
                     if (projectid === "") {
                         bookmarks.length = 0;
                     }
-                    var results = users.filter(function (element) {
+                    var results = bookmarks.filter(function (element) {
                         return element.attributes.projectid === projectid;
                     });
                     if (results.length === 0) {
                         // not in collection -- retrieve them from the db
                         window.Application.db.transaction(function (tx) {
                             tx.executeSql("SELECT * FROM bookmark;", [], function (tx, res) {
+                                console.log("SELECT ok: " + res.rows.length + " bookmark items");
                                 var tmpString = "";
                                 // populate the chapter collection with the query results
                                 for (i = 0, len = res.rows.length; i < len; ++i) {
@@ -395,8 +416,12 @@ define(function (require) {
                                     bookmark.on("change", bookmark.save, bookmark);
                                 }
                                 // return the filtered results (now that we have them)
-                                retValue = users.filter(function (element) {
-                                    return element.attributes.projectid === projectid;
+                                retValue = bookmarks.filter(function (element) {
+                                    if (projectid.length > 0) {
+                                        return element.attributes.projectid === projectid;
+                                    } else {
+                                        return true; // empty projectid - clear local cache, then return all results
+                                    }
                                 });
                                 options.success(retValue);
                                 deferred.resolve(retValue);
