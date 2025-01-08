@@ -163,20 +163,14 @@ define(function (require) {
                         // show the search and adapt links 
                         str += '<li class="topcoat-list__item"><a class="big-link" id="search" title="' + i18n.t('view.dscSearch') + '" href="#search/' + projectid + '"><span class="btn-book"></span>' + i18n.t('view.lblSearch') + '<span class="chevron"></span></a></li>';
                         console.log(str);
-                        // build the adapt link
-                        var arr = window.Application.bookmarkList.where({projectid: projectid});
-                        console.log("onShow() - matching bookmark count: " + arr.length);
-                        // filtered bookmark array could have items belonging to multiple users -- find the one associated with our user
-                        arr.forEach(function (model) {
-                            var bookmarkid = window.Application.user.get("bookmarks").indexOf(model.get("bookmarkid"));
-                            if (bookmarkid) {
-                                // found it -- populate the Adapt link
-                                str += '<li class="topcoat-list__item"><a class="big-link" id="adapt" title="' + i18n.t('view.dscAdapt') + '"';
-                                str += '#adapt/' + model.get("chapterid") + '"><span class="btn-adapt"></span><span id="lblAdapt">';
-                                str += (model.get("bookname").length > 0) ? model.get("bookname") : i18n.t('view.lblAdapt');
-                                str += '</span><span class="chevron"></span></a></li>';
-                            }
-                        })
+                        // build the adapt link from the current bookmark, if there is one
+                        if (window.Application.currentBookmark) {
+                            console.log("onShow() - current bookmark set");
+                            str += '<li class="topcoat-list__item"><a class="big-link" id="adapt" title="' + i18n.t('view.dscAdapt') + '"';
+                            str += '#adapt/' + window.Application.currentBookmark.get("chapterid") + '"><span class="btn-adapt"></span><span id="lblAdapt">';
+                            str += (window.Application.currentBookmark.get("bookname").length > 0) ? window.Application.currentBookmark.get("bookname") : i18n.t('view.lblAdapt');
+                            str += '</span><span class="chevron"></span></a></li>';
+                        }
                         // done building our action links -- append them to the html list
                         $("#ProjectItems").append(str);
                     }

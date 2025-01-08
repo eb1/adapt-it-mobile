@@ -392,6 +392,10 @@ define(function (require) {
                             });
                             // save and add to the collection
                             newBookmark.save();
+                            if (model.get('projectid') === window.Application.currentProject.get('projectid')) {
+                                // this is the current project -- set this bookmark as the current bookmark
+                                window.Application.currentBookmark = newBookmark;
+                            }
                             window.Application.bookmarkList.add(newBookmark);
                             // add this to the user's bookmarkid array
                             bookmarks.push(bookmarkid);                               
