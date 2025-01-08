@@ -78,6 +78,7 @@ define(function (require) {
             searchList: null,
             searchIndex: 0,
             currentProject: null,
+            currentBookmark: null,
             user: null,
             localURLs: [],
             version: "1.17.3", // appended with Android / iOS build info
@@ -457,6 +458,7 @@ define(function (require) {
                         console.log("currentProject: " + window.Application.currentProject.get("projectid"));
                         window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
                         window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
+                        window.Application.bookmarkList.findWhere({projectid: window.Application.currentProject.get("projectid")});
                     }
                     // Did another task launch us (i.e., did our handleOpenURL() from main.js
                     // get called)? If so, pull out the URL and process the resulting file
