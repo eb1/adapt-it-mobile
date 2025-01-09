@@ -6228,7 +6228,7 @@ define(function (require) {
             onCancel: function () {
                 // User is cancelling the import operation -- roll back and go home
                 var deletedCurrentDoc = false;
-                var lastAdaptedBookID = window.Application.currentProject.get('lastAdaptedBookID').toString();
+                var lastAdaptedBookID = window.Application.currentBookmark.get('bookid').toString();
                 if (isKB === false) {
                     // can only really roll back a book import (by deleting it)
                     var book = window.Application.BookList.where({projectid: this.model.get('projectid'), filename: fileName})[0];
@@ -6322,10 +6322,10 @@ define(function (require) {
                             chap.save({name: newChapterName});
                             if (firstChapWithVerses === null && chap.get('versecount') !== 0) {
                                 firstChapWithVerses = chap;
-                                // it's possible we also need to change the lastAdaptedName for this chapter book
-                                if (this.model.get("lastAdaptedName").indexOf(bookName) > -1) {
+                                // it's possible we also need to change the name in our bookmark
+                                if (window.Application.currentBookmark.get("name").indexOf(bookName) > -1) {
                                     // we have chapters -- use the first one that has some verses
-                                    this.model.set('lastAdaptedName', chap.get('name'));
+                                    window.Application.currentBookmark.set('name', chap.get('name'));
                                 }
                             }
                         }
