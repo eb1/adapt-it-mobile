@@ -21,6 +21,7 @@ define(function (require) {
         bookModels      = require('app/models/book'),
         spModels        = require('app/models/sourcephrase'),
         tuModels        = require('app/models/targetunit'),
+        userModels      = require('app/models/user'),
         tplChapterList  = require('text!tpl/ChapterList.html'),
         tplLookup       = require('text!tpl/Lookup.html'),
         tplNewTU        = require('text!tpl/NewTU.html'),
@@ -137,7 +138,7 @@ define(function (require) {
             var nodes = [];
             var i = 0;
             var deletedCurrentDoc = false;
-            var lastAdaptedBookID = window.Application.currentProject.get('lastAdaptedBookID').toString();
+            var lastAdaptedBookID = window.Application.currentBookmark.get('bookid');
 
             // iterate through the selected documents
             $('.li-chk.chk-selected').each(function () {
@@ -164,34 +165,31 @@ define(function (require) {
             // Did we just delete all the books?
             if (window.Application.BookList.length === 0) {
                 // no books left in the list -- clear out the last adapted chapter and book
-                window.Application.currentProject.set('lastDocument', "");
-                window.Application.currentProject.set('lastAdaptedBookID', 0);
-                window.Application.currentProject.set('lastAdaptedChapterID', 0);
-                window.Application.currentProject.set('lastAdaptedName', "");
-                window.Application.currentProject.save();
+                // (don't create a new bookmark)
+                window.Application.bookmarkList.remove(window.Application.currentBookmark);                
+                window.Application.currentBookmark = null;
             } else if (deletedCurrentDoc === true) {
-                // We just deleted the current Document/book;
-                // reset the current chapter and book to the first book in our collection
-                // fall back on clearing out the lastAdapted stuff
-                window.Application.currentProject.set('lastDocument', "");
-                window.Application.currentProject.set('lastAdaptedBookID', 0);
-                window.Application.currentProject.set('lastAdaptedChapterID', 0);
-                window.Application.currentProject.set('lastAdaptedName', "");
-                // now try to get the first book in the book list              
+                // We just deleted the current Document/book
+                window.Application.bookmarkList.remove(window.Application.currentBookmark);                
+                window.Application.currentBookmark = null;
+                // create a bookmark pointing to the first chapter of the first book in our book list
                 var bk = window.Application.BookList.at(0);
                 if (bk) {
                     // got it -- set the lastAdapted stuff to the first chapter
                     var cid = bk.get("chapters")[0];
-                    window.Application.currentProject.set('lastDocument', bk.get("name"));
-                    window.Application.currentProject.set('lastAdaptedBookID', bk.get("bookid"));
-                    window.Application.currentProject.set('lastAdaptedChapterID', cid);
-                    var chapter = window.Application.ChapterList.findWhere({chapterid: cid});
-                    if (chapter) {
-                        window.Application.currentProject.set('lastAdaptedName', chapter.get('name'));
-                    } else {
-                        // can't get the chapter -- just clear out the lastAdaptedName value
-                        window.Application.currentProject.set('lastAdaptedName', "");
-                    }
+                    var bookmarkid = window.Application.generateUUID();
+                    var newBookmark = new userModels.Bookmark({
+                        bookmarkid: bookmarkid,
+                        projectid: bk.get('projectid'),
+                        bookname: bk.get("name"),
+                        bookid: bk.get("bookid"),
+                        chapterid: cid
+                    });
+                    // save and add to the collection
+                    newBookmark.save();
+                    window.Application.bookmarkList.add(newBookmark);
+                    // this is the current project -- set this bookmark as the current bookmark
+                    window.Application.currentBookmark = newBookmark;
                 }
                 window.Application.currentProject.save();
             }

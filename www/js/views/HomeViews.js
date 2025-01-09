@@ -21,6 +21,7 @@ define(function (require) {
         chapterModel    = require('app/models/chapter'),
         spModel         = require('app/models/sourcephrase'),
         kbmodel         = require('app/models/targetunit'),
+        userModel       = require('app/models/user'),
         clickCount      = 0,
         strPassword     = "dangerous",
         books           = null,
@@ -38,6 +39,9 @@ define(function (require) {
             chapters = new chapterModel.ChapterCollection();
             sourcephrases = new spModel.SourcePhraseCollection();
             targetunits = new kbmodel.TargetUnitCollection();
+            books = new bookModel.BookCollection();
+            bookmarks = new userModel.BookmarkCollection();
+            users = new userModel.UserCollection();
             // clear all documents
             sourcephrases.clearAll();
             chapters.clearAll();
@@ -47,6 +51,9 @@ define(function (require) {
             // clear all project data
             localStorage.removeItem("CurrentProjectID");
             window.Application.currentProject = null;
+            window.Application.currentBookmark = null;
+            bookmarks.clearAll();
+            users.clearAll();
             projects.clearAll();
             // refresh the view
             window.Application.ProjectList.fetch({reset: true, data: {name: ""}});

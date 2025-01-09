@@ -443,7 +443,7 @@ define(function (require) {
                         if ((window.Application.searchList !== null) && (window.Application.searchList.length > 0)) {
                             // we're searching for a translation -- set the selected SPID to the first hit in this chapter
                             var searchRS = "";
-                            project.set('lastAdaptedSPID', window.Application.searchList[window.Application.searchIndex].attributes.spid);
+                            window.Application.currentBookmark.set('spid', window.Application.searchList[window.Application.searchIndex].attributes.spid);
                             // show the search bar
                             if (!($("#SearchBar").hasClass("show-flex"))) {
                                 $("#SearchBar").addClass("show-flex");
@@ -467,13 +467,13 @@ define(function (require) {
                         if (this.allowEditBlankSP === false) {
                             $(".nosource").prop('contenteditable', false); // no source -- set target to read-only
                         }
-                        if (project.get('lastAdaptedSPID').length > 0) {
+                        if (window.Application.currentBookmark.get('spid').length > 0) {
                             // not searching, but there is a sourcephrase ID from our last session -- select it now
                             isSelecting = true;
-                            if ($('#pile-' + project.get('lastAdaptedSPID')).length !== 0) {
-                                console.log("render: selecting lastAdaptedSPID:" + project.get('lastAdaptedSPID'));
+                            if ($('#pile-' + window.Application.currentBookmark.get('spid')).length !== 0) {
+                                console.log("render: selecting bookmark spid:" + window.Application.currentBookmark.get('spid'));
                                 // everything's okay -- select the last adapted SPID
-                                selectedStart = $('#pile-' + project.get('lastAdaptedSPID')).get(0);
+                                selectedStart = $('#pile-' + window.Application.currentBookmark.get('spid')).get(0);
                                 selectedEnd = selectedStart;
                                 idxStart = $(selectedStart).index() - 1;
                                 idxEnd = idxStart;
@@ -481,7 +481,7 @@ define(function (require) {
                                 // select it
                                 $(selectedStart).mouseup();
                             } else {
-                                // for some reason the last adapted SPID has gotten out of sync --
+                                // for some reason the last adapted SPID has gotten out of sync  --
                                 // select the first block instead
                                 selectedStart = $(".pile").first().get(0);
                                 selectedEnd = selectedStart;
@@ -2309,8 +2309,8 @@ define(function (require) {
                     selectedStart = event.currentTarget.parentElement; // pile
                 }
                 console.log("selectedAdaptation: " + selectedStart.id);
-                // Update lastAdaptedSPID
-                project.set('lastAdaptedSPID', selectedStart.id.substr(5));
+                // Update bookmark spid
+                window.Application.currentBookmark.set('spid', selectedStart.id.substr(5));
 
                 // enable prev / next buttons
                 $("#PrevSP").prop('disabled', false); // enable toolbar button
@@ -2671,8 +2671,8 @@ define(function (require) {
                     selectedStart = event.currentTarget.parentElement; // pile
                 }
                 console.log("selectedStart: " + selectedStart.id);
-                // Update lastAdaptedSPID
-                project.set('lastAdaptedSPID', selectedStart.id.substr(5));
+                // Update bookmark spid
+                window.Application.currentBookmark.set('spid', selectedStart.id.substr(5));
 
                 // enable prev / next buttons
                 $("#PrevSP").prop('disabled', false); // enable toolbar button
@@ -3527,9 +3527,9 @@ define(function (require) {
                     }
                     // is there a current selection?
                     if (selectedStart === null) {
-                        // no current selection -- see if there's a lastAdaptedPile
-                        if ($('#pile-' + project.get('lastAdaptedSPID')).length !== 0) {
-                            selectedStart = $('#pile-' + project.get('lastAdaptedSPID')).get(0);
+                        // no current selection -- see if there's a bookmark
+                        if (window.Application.currentBookmark !== null && window.Application.currentBookmark.get('spid').length > 0) {
+                            selectedStart = $('#pile-' + window.Application.currentBookmark.get('spid')).get(0);
                         }
                         if (selectedStart === null) {
                             // no luck -- just grab the first pile
@@ -4783,12 +4783,12 @@ define(function (require) {
                 // is there a current selection?
                 if (selectedStart === null) {
                     // no current selection, but we need one -- 
-                    // first see if there's a lastAdaptedPile
-                    if ($('#pile-' + project.get('lastAdaptedSPID')).length !== 0) {
-                        selectedStart = $('#pile-' + project.get('lastAdaptedSPID')).get(0);
+                    // first see if there's a bookmark
+                    if (window.Application.currentBookmark !== null && window.Application.currentBookmark.get('spid').length > 0) {
+                        selectedStart = $('#pile-' + window.Application.currentBookmark.get('spid')).get(0);
                     }
                     if (selectedStart === null) {
-                        // no lastAdaptedSPID -- just grab the first pile
+                        // no spid -- just grab the first pile
                         selectedStart = $(".pile").first().get(0);
                     }
                 } 
@@ -4849,7 +4849,7 @@ define(function (require) {
                 lastSelectedFT = selectedEnd;
                 // we're also working on a specific source phrase (the FT gets saved there) -
                 // set the last selected SPID
-                project.set('lastAdaptedSPID', selectedStart.id.substr(5));
+                window.Application.currentBookmark.set('spid', selectedStart.id.substr(5));
                 // now select the piles in the UI, and build the default FT text if we need to
                 idxStart = $(selectedStart).index(); 
                 idxEnd = $(selectedEnd).index();
@@ -5224,13 +5224,13 @@ define(function (require) {
                 }
                 // if we haven't re-routed, our spid is in this chapter. Go to it now.
                 $("#SearchIndex").html("(" + (window.Application.searchIndex + 1) + "/" + window.Application.searchList.length + ")");
-                project.set('lastAdaptedSPID', spNew.get("spid"));
+                window.Application.currentBookmark.set('spid', spNew.get("spid"));
                 isSelecting = true;
                 lastTapTime = null; // clear out the last tap -- we just want to select this item
-                if ($('#pile-' + project.get('lastAdaptedSPID')).length !== 0) {
-                    console.log("render: selecting lastAdaptedSPID:" + project.get('lastAdaptedSPID'));
+                if ($('#pile-' + window.Application.currentBookmark.get('spid')).length !== 0) {
+                    console.log("render: selecting spid:" + window.Application.currentBookmark.get('spid'));
                     // everything's okay -- select the last adapted SPID
-                    selectedStart = $('#pile-' + project.get('lastAdaptedSPID')).get(0);
+                    selectedStart = $('#pile-' + window.Application.currentBookmark.get('spid')).get(0);
                     selectedEnd = selectedStart;
                     idxStart = $(selectedStart).index() - 1;
                     idxEnd = idxStart;
@@ -5262,13 +5262,13 @@ define(function (require) {
                 }
                 // if we haven't re-routed, our spid is in this chapter. Go to it now.
                 $("#SearchIndex").html("(" + (window.Application.searchIndex + 1) + "/" + window.Application.searchList.length + ")");
-                project.set('lastAdaptedSPID', spNew.get("spid"));
+                window.Application.currentBookmark.set('spid', spNew.get("spid"));
                 isSelecting = true;
                 lastTapTime = null; // clear out the last tap -- we just want to select this item
-                if ($('#pile-' + project.get('lastAdaptedSPID')).length !== 0) {
-                    console.log("render: selecting lastAdaptedSPID:" + project.get('lastAdaptedSPID'));
+                if ($('#pile-' + window.Application.currentBookmark.get('spid')).length !== 0) {
+                    console.log("render: selecting spid:" + window.Application.currentBookmark.get('spid'));
                     // everything's okay -- select the last adapted SPID
-                    selectedStart = $('#pile-' + project.get('lastAdaptedSPID')).get(0);
+                    selectedStart = $('#pile-' + window.Application.currentBookmark.get('spid')).get(0);
                     selectedEnd = selectedStart;
                     idxStart = $(selectedStart).index() - 1;
                     idxEnd = idxStart;
@@ -5310,8 +5310,8 @@ define(function (require) {
                 if ($("#MoreActionsMenu").hasClass("show")) {
                     $("#MoreActionsMenu").toggleClass("show");
                 }
-                // update the lastAdaptedSPID -- this tells us our current translation
-                project.set('lastAdaptedSPID', selectedStart.id.substr(5));
+                // update the spid -- this tells us our current translation
+                window.Application.currentBookmark.set('spid', selectedStart.id.substr(5));
                 this.listView.showTranslations();
             },
             

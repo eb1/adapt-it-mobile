@@ -682,11 +682,13 @@ define(function (require) {
                 TargetDir: "",
                 NavDir: "",
                 name: "",
+                // EDB 9 Jan 2025 (v1.18) - these have moved to the bookmarks table
                 lastDocument: "",
                 lastAdaptedBookID: 0,
                 lastAdaptedChapterID: 0,
                 lastAdaptedSPID: "",
                 lastAdaptedName: "",
+                // end EDB
                 CustomFilters: "false",
                 FilterMarkers: "\\lit \\_table_grid \\_header \\_intro_base \\x \\r \\cp \\_horiz_rule \\ie \\rem \\_unknown_para_style \\_normal_table \\note \\_heading_base \\_hidden_note \\_footnote_caller \\_dft_para_font \\va \\_small_para_break \\_footer \\_vernacular_base \\pro \\xt \\_notes_base \\__normal \\xdc \\ide \\mr \\xq \\_annotation_ref \\_annotation_text \\_peripherals_base \\_gls_lang_interlinear \\free \\rq \\_nav_lang_interlinear \\_body_text \\cl \\xot \\efm \\bt \\_unknown_char_style \\_double_boxed_para \\_hdr_ftr_interlinear \\xk \\_list_base \\ib \\xnt \\fig \\restore \\_src_lang_interlinear \\vp \\_tgt_lang_interlinear \\ef \\ca \\xo \\_single_boxed_para \\sts"
             },

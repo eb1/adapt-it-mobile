@@ -567,7 +567,7 @@ define(function (require) {
                 console.log("showTranslations");
                 // update the KB and source phrase list, then display the Translations screen with the currently-selected sourcephrase
                 $.when(window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}})).done(function () {
-                    $.when(window.Application.spList.fetch({reset: true, data: {spid: window.Application.currentProject.get('lastAdaptedSPID')}})).done(function () {
+                    $.when(window.Application.spList.fetch({reset: true, data: {spid: id}})).done(function () {
                         var sp = window.Application.spList.where({spid: id});
                         if (sp === null || sp.length === 0) {
                             console.log("sp Entry not found:" + id);
@@ -695,13 +695,28 @@ define(function (require) {
                                     book.set('name', bookName);
                                     book.save();
                                 }
-                                proj.set('lastDocument', book.get('name'));
-                                proj.set('lastAdaptedBookID', chapter.get('bookid'));
-                                proj.set('lastAdaptedChapterID', chapter.get('chapterid'));
-                                proj.set('lastAdaptedName', chapter.get('name'));
-                                proj.save();
-                                window.Application.currentProject = proj;
-                                localStorage.setItem("CurrentProjectID", proj.get("projectid"));
+                                // do we have a current bookmark?
+                                if (window.Application.currentBookmark === null) {
+                                    // no -- create one
+                                    var bookmarkid = window.Application.generateUUID();
+                                    var newBookmark = new userModels.Bookmark({
+                                        bookmarkid: bookmarkid,
+                                        projectid: proj.get('projectid'),
+                                        bookname: book.get("name"),
+                                        bookid: book.get("bookid"),
+                                        chapterid: chapter.get('chapterid')
+                                    });
+                                    // save and add to the collection
+                                    newBookmark.save();
+                                    window.Application.bookmarkList.add(newBookmark);
+                                    // this is the current project -- set this bookmark as the current bookmark
+                                    window.Application.currentBookmark = newBookmark;
+                                } else {
+                                    // we have a current bookmark -- update it
+                                    window.Application.currentBookmark.set('name', book.get('name'));
+                                    window.Application.currentBookmark.set('bookid', book.get('bookid'));
+                                    window.Application.currentBookmark.set('chapterid', book.get('chapterid'));
+                                }
                             }
                             window.Application.main.show(theView);
                         } else {
