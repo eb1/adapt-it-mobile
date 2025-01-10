@@ -29,6 +29,8 @@ define(function (require) {
         sourcephrases   = null,
         targetunits     = null,
         projects        = null,
+        users           = null,
+        bookmarks       = null,
         
         // Helper method to completely reset AIM. Called when the user clicks on the
         // title ("Adapt It Mobile") 5 TIMES on the Home View without clicking elsewhere,
@@ -149,40 +151,42 @@ define(function (require) {
 
             onShow: function () {
                 console.log("HomeView::onShow() entry");
-                // first, make sure our kblist has current info so our list of available options is accurate
-                
-                window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}}).done(function() {
-                    var projectid = window.Application.currentProject.get("projectid");
-                    console.log("onShow() - kblist fetch callback");
-                    // If there is a current project, Application.Booklist should have the list of books for that project. 
-                    books = window.Application.BookList;
-                    console.log("book count for current project: " + books.length);
-                    if (books.length > 0) {
-                        // There is at least 1 book imported into the project. 
-                        // Show the search and adapt links, and optionally the export link (if there's something in the KB)
-                        var tuCount = window.Application.kbList.length;
-                        var projectid = window.Application.currentProject.get('projectid');
-                        var str = "";
-                        if (tuCount > 0) {
-                            // at least some translation done -- show the export link
-                            str += '<li class="topcoat-list__item"><a class="big-link" id="export" title="' + i18n.t("view.lblExport") + '" href="#export/' + projectid + '"><span class="btn-export"></span><span id="lblExport">' + i18n.t('view.lblExport') + '</span><span class="chevron"></span></a></li>';
+                // only check KB if we have a current project defined
+                if (window.Application.currentProject !== null) {
+                    // first, make sure our kblist has current info so our list of available options is accurate
+                    window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}}).done(function() {
+                        var projectid = window.Application.currentProject.get("projectid");
+                        console.log("onShow() - kblist fetch callback");
+                        // If there is a current project, Application.Booklist should have the list of books for that project. 
+                        books = window.Application.BookList;
+                        console.log("book count for current project: " + books.length);
+                        if (books.length > 0) {
+                            // There is at least 1 book imported into the project. 
+                            // Show the search and adapt links, and optionally the export link (if there's something in the KB)
+                            var tuCount = window.Application.kbList.length;
+                            var projectid = window.Application.currentProject.get('projectid');
+                            var str = "";
+                            if (tuCount > 0) {
+                                // at least some translation done -- show the export link
+                                str += '<li class="topcoat-list__item"><a class="big-link" id="export" title="' + i18n.t("view.lblExport") + '" href="#export/' + projectid + '"><span class="btn-export"></span><span id="lblExport">' + i18n.t('view.lblExport') + '</span><span class="chevron"></span></a></li>';
+                            }
+                            // show the search and adapt links 
+                            str += '<li class="topcoat-list__item"><a class="big-link" id="search" title="' + i18n.t('view.dscSearch') + '" href="#search/' + projectid + '"><span class="btn-book"></span>' + i18n.t('view.lblSearch') + '<span class="chevron"></span></a></li>';
+                            console.log(str);
+                            // build the adapt link from the current bookmark, if there is one
+                            if (window.Application.currentBookmark) {
+                                console.log("onShow() - current bookmark set");
+                                str += '<li class="topcoat-list__item"><a class="big-link" id="adapt" title="' + i18n.t('view.dscAdapt') + '"';
+                                str += '#adapt/' + window.Application.currentBookmark.get("chapterid") + '"><span class="btn-adapt"></span><span id="lblAdapt">';
+                                str += (window.Application.currentBookmark.get("bookname").length > 0) ? window.Application.currentBookmark.get("bookname") : i18n.t('view.lblAdapt');
+                                str += '</span><span class="chevron"></span></a></li>';
+                            }
+                            // done building our action links -- append them to the html list
+                            $("#ProjectItems").append(str);
                         }
-                        // show the search and adapt links 
-                        str += '<li class="topcoat-list__item"><a class="big-link" id="search" title="' + i18n.t('view.dscSearch') + '" href="#search/' + projectid + '"><span class="btn-book"></span>' + i18n.t('view.lblSearch') + '<span class="chevron"></span></a></li>';
-                        console.log(str);
-                        // build the adapt link from the current bookmark, if there is one
-                        if (window.Application.currentBookmark) {
-                            console.log("onShow() - current bookmark set");
-                            str += '<li class="topcoat-list__item"><a class="big-link" id="adapt" title="' + i18n.t('view.dscAdapt') + '"';
-                            str += '#adapt/' + window.Application.currentBookmark.get("chapterid") + '"><span class="btn-adapt"></span><span id="lblAdapt">';
-                            str += (window.Application.currentBookmark.get("bookname").length > 0) ? window.Application.currentBookmark.get("bookname") : i18n.t('view.lblAdapt');
-                            str += '</span><span class="chevron"></span></a></li>';
-                        }
-                        // done building our action links -- append them to the html list
-                        $("#ProjectItems").append(str);
-                    }
-                        
-                });
+                            
+                    });    
+                }
 
                 clickCount = 0;
             },
