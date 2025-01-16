@@ -48,7 +48,7 @@ define(function (require) {
         defaults: {
             bookmarkid: "",
             projectid: "",
-            bookname: "",
+            name: "",
             bookid: 0,
             chapterid: 0,
             spid: ""

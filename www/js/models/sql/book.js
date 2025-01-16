@@ -198,13 +198,19 @@ define(function (require) {
             sync: function (method, model, options) {
                 if (method === "read") {
                     if (options.data.hasOwnProperty('id')) {
+                        deferred = $.Deferred();
                         findById(options.data.id).done(function (data) {
                             options.success(data);
+                            deferred.resolve(data);
                         });
+                        return deferred.promise();
                     } else if (options.data.hasOwnProperty('projectid')) {
+                        deferred = $.Deferred();
                         findByProject(options.data.projectid).done(function (data) {
                             options.success(data);
+                            deferred.resolve(data);
                         });
+                        return deferred.promise();
                     } else if (options.data.hasOwnProperty('name')) {
                         var deferred = $.Deferred();
                         var name = options.data.name;
@@ -258,6 +264,8 @@ define(function (require) {
                         }
                         // return the promise
                         return deferred.promise();
+                    } else {
+                        return Backbone.sync.apply(this, arguments);
                     }
                 }
             }

@@ -217,6 +217,8 @@ define(function (require) {
                         }
                         // return the promise
                         return deferred.promise();
+                    } else {
+                        return Backbone.sync.apply(this, arguments);
                     }
                 }
             }

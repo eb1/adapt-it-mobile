@@ -28,6 +28,7 @@ define(function (require) {
         spModel         = require('app/models/sourcephrase'),
         chapModel       = require('app/models/chapter'),
         kbModels        = require('app/models/targetunit'),
+        userModels      = require('app/models/user'),
         scrIDs          = require('utils/scrIDs'),
         USFM            = require('utils/usfm'),
         kblist          = null, // populated in onShow
@@ -459,16 +460,23 @@ define(function (require) {
                     // set the current bookmark if not already set
                     if (window.Application.currentBookmark === null) {
                         var bookmarkid = window.Application.generateUUID();
-                        window.Application.currentBookmark = new userModels.Bookmark({
+                        var newBookmark = new userModels.Bookmark({
                             bookmarkid: bookmarkid,
                             projectid: project.get('projectid'),
-                            bookname: bookName,
+                            name: bookName,
                             bookid: bookID,
                             chapterid: chapterID // note: no spID set (will start at beginning)
                         });
                         // save and add to the collection
                         newBookmark.save();
                         window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", bookName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
                     }
 
                     // parse the text file and create the SourcePhrases
@@ -979,16 +987,23 @@ define(function (require) {
                     // set the current bookmark if not already set
                     if (window.Application.currentBookmark === null) {
                         var bookmarkid = window.Application.generateUUID();
-                        window.Application.currentBookmark = new userModels.Bookmark({
+                        var newBookmark = new userModels.Bookmark({
                             bookmarkid: bookmarkid,
                             projectid: project.get('projectid'),
-                            bookname: bookName,
+                            name: chapterName,
                             bookid: bookID,
                             chapterid: chapterID // note: no spID set (will start at beginning)
                         });
                         // save and add to the collection
                         newBookmark.save();
                         window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
                     }
                     // now read the contents of the file
                     parseNode($($xml).find("usx"));
@@ -2207,16 +2222,23 @@ define(function (require) {
                     // set the current bookmark if not already set
                     if (window.Application.currentBookmark === null) {
                         var bookmarkid = window.Application.generateUUID();
-                        window.Application.currentBookmark = new userModels.Bookmark({
+                        var newBookmark = new userModels.Bookmark({
                             bookmarkid: bookmarkid,
                             projectid: project.get('projectid'),
-                            bookname: bookName,
+                            name: chapterName,
                             bookid: bookID,
                             chapterid: chapterID // note: no spID set (will start at beginning)
                         });
                         // save and add to the collection
                         newBookmark.save();
                         window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
                     }
                     // create the sourcephrases
                     var $xml = $(xmlDoc);
@@ -3336,17 +3358,26 @@ define(function (require) {
                                     if (verseCount > 0) {
                                         // set the current bookmark if not already set
                                         if (window.Application.currentBookmark === null) {
+                                            console.log("readUSFMDoc() - creating bookmark");
                                             var bookmarkid = window.Application.generateUUID();
-                                            window.Application.currentBookmark = new userModels.Bookmark({
+                                            var newBookmark = new userModels.Bookmark({
                                                 bookmarkid: bookmarkid,
                                                 projectid: project.get('projectid'),
-                                                bookname: bookName,
+                                                name: chapterName,
                                                 bookid: bookID,
                                                 chapterid: chapterID // note: no spID set (will start at beginning)
                                             });
                                             // save and add to the collection
                                             newBookmark.save();
                                             window.Application.bookmarkList.add(newBookmark);
+                                            window.Application.currentBookmark = newBookmark;
+                                        } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                                            console.log("readUSFMDoc() - updating bookmark for book: " + bookName);
+                                            // project is set, but the book / chapter values are not set -- set them now
+                                            window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                                            window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                                            window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                                            window.Application.currentBookmark.update();
                                         }
                                     }
                                     // update the last adapted for the previous chapter before closing it out
@@ -3787,17 +3818,24 @@ define(function (require) {
                             // set the current bookmark if not already set
                             if (window.Application.currentBookmark === null) {
                                 var bookmarkid = window.Application.generateUUID();
-                                window.Application.currentBookmark = new userModels.Bookmark({
+                                var newBookmark = new userModels.Bookmark({
                                     bookmarkid: bookmarkid,
                                     projectid: project.get('projectid'),
-                                    bookname: bookName,
+                                    name: chapterName,
                                     bookid: bookID,
                                     chapterid: chapterID // note: no spID set (will start at beginning)
                                 });
                                 // save and add to the collection
                                 newBookmark.save();
                                 window.Application.bookmarkList.add(newBookmark);
-                            }                            
+                                window.Application.currentBookmark = newBookmark;
+                            } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                                // project is set, but the book / chapter values are not set -- set them now
+                                window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                                window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                                window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                                window.Application.currentBookmark.update();
+                            }                       
                         }
                         // update the verse count for this chapter before closing it out
                         if (chapter.get('versecount') < verseCount) {
@@ -6228,9 +6266,10 @@ define(function (require) {
             onCancel: function () {
                 // User is cancelling the import operation -- roll back and go home
                 var deletedCurrentDoc = false;
-                var lastAdaptedBookID = window.Application.currentBookmark.get('bookid').toString();
-                if (isKB === false) {
+                var lastAdaptedBookID = "";
+                if (isKB === false && window.Application.currentBookmark !== null) {
                     // can only really roll back a book import (by deleting it)
+                    lastAdaptedBookID = window.Application.currentBookmark.get('bookid');
                     var book = window.Application.BookList.where({projectid: this.model.get('projectid'), filename: fileName})[0];
                     if (book) {
                         // got as far as saving the book -- did we happen to set this to the current book?
@@ -6264,7 +6303,7 @@ define(function (require) {
                                 var newBookmark = new userModels.Bookmark({
                                     bookmarkid: bookmarkid,
                                     projectid: bk.get('projectid'),
-                                    bookname: bk.get("name"),
+                                    name: bk.get("name"), // BUGBUG - should be chaptername within book?
                                     bookid: bk.get("bookid"),
                                     chapterid: cid
                                 });
@@ -6292,6 +6331,7 @@ define(function (require) {
             // - If the user has changed the book name, update the name value in the book and each chapter
             // - Close out the import and move to the home page
             onOK: function () {
+                console.log("onOK - entry");
                 if (bookName.length === 0) {
                     // prevent re-entry -- just go to the home page
                     window.location.replace("");
@@ -6302,6 +6342,7 @@ define(function (require) {
                     if ($("#BookName").length > 0 && $("#BookName").val() !== bookName) {
                         // name change -- update all the things
                         var newName = $("#BookName").val().trim();
+                        console.log("onOK() - new book name: " + newName);
                         var book = window.Application.BookList.where({projectid: this.model.get('projectid'), name: bookName})[0];
                         var i = 0;
                         var chapterName = "";
@@ -6329,22 +6370,9 @@ define(function (require) {
                                 }
                             }
                         }
-                        // last document and chapter (if the first import)
-                        // note that these might have already been set in the readXXXDoc() methods above
-                        // set the current bookmark if not already set
-                        if (window.Application.currentBookmark === null) {
-                            var bookmarkid = window.Application.generateUUID();
-                            window.Application.currentBookmark = new userModels.Bookmark({
-                                bookmarkid: bookmarkid,
-                                projectid: project.get('projectid'),
-                                bookname: bookName,
-                                bookid: bookID,
-                                chapterid: chapterID // note: no spID set (will start at beginning)
-                            });
-                            // save and add to the collection
-                            newBookmark.save();
-                            window.Application.bookmarkList.add(newBookmark);
-                        }
+                        // name in the current bookmark
+                        window.Application.currentBookmark.set("name", chapterList[0].get('name'), {silent: true});
+                        window.Application.currentBookmark.update();
                     }
                     // save the model
                     this.model.save();

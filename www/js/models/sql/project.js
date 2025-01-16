@@ -363,7 +363,7 @@ define(function (require) {
                         // exception thrown -- assume table doesn't exist
                         console.log("upgradeSchema: error: " + err.message);
                     });
-                    theSQL = 'CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, bookname text, bookid integer, chapterid integer, spid text);';
+                    theSQL = 'CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, name text, bookid text, chapterid text, spid text);';
                     tx.executeSql(theSQL, [], function (tx, res) {
                         console.log("upgradeSchema() - bookmark table created");
                     }, function (err) {

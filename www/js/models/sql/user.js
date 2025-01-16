@@ -98,7 +98,7 @@ define(function (require) {
         },
         update: function () {
             var attributes = this.attributes;
-            var sql = "UPDATE user SET username=?, roles=? copysource=?, wrapusfm=?, stopatboundaries=?, alloweditblanksp=?, showtranslationchecks=?, defaultfttarget=?, uilang=?, darkmode=?, bookmarks=?, wordspacing=? WHERE userid=?;";
+            var sql = "UPDATE user SET username=?, roles=?, copysource=?, wrapusfm=?, stopatboundaries=?, alloweditblanksp=?, showtranslationchecks=?, defaultfttarget=?, uilang=?, darkmode=?, bookmarks=?, wordspacing=? WHERE userid=?;";
             window.Application.db.transaction(function (tx) {
                 tx.executeSql(sql, [attributes.username,JSON.stringify(attributes.roles), attributes.copysource, attributes.wrapusfm, attributes.stopatboundaries, attributes.alloweditblanksp, attributes.showtranslationchecks, attributes.defaultfttarget, attributes.uilang, attributes.darkmode, JSON.stringify(attributes.bookmarks), attributes.wordspacing, attributes.userid], function (tx, res) {
                     console.log("user UPDATE ok: " + res.toString());
@@ -262,9 +262,9 @@ define(function (require) {
         defaults: {
             bookmarkid: "",
             projectid: "",
-            bookname: "",
-            bookid: 0,
-            chapterid: 0,
+            name: "",       // lastAdaptedName -- UI label of book + chapter (e.g., "John 1")
+            bookid: "",
+            chapterid: "",
             spid: ""
         },
         
@@ -288,9 +288,9 @@ define(function (require) {
         },
         create: function () {
             var attributes = this.attributes;
-            var sql = "INSERT INTO bookmark (bookmarkid, bookname, bookid, chapterid, spid) VALUES (?,?,?,?,?);";
+            var sql = "INSERT INTO bookmark (bookmarkid, projectid, name, bookid, chapterid, spid) VALUES (?,?,?,?,?,?);";
             window.Application.db.transaction(function (tx) {
-                tx.executeSql(sql, [attributes.bookmarkid, attributes.bookname, attributes.bookid, attributes.chapterid, attributes.spid], function (tx, res) {
+                tx.executeSql(sql, [attributes.bookmarkid, attributes.projectid, attributes.name, attributes.bookid, attributes.chapterid, attributes.spid], function (tx, res) {
                     console.log("bookmark INSERT ok: " + res.toString());
                 }, function (tx, err) {
                     console.log("bookmark INSERT (create) error: " + err.message);
@@ -299,10 +299,10 @@ define(function (require) {
         },
         update: function () {
             var attributes = this.attributes;
-            var sql = "UPDATE bookmark SET bookname=?, bookid=?, chapterid=?, spid=? WHERE bookmarkid=?;";
+            var sql = "UPDATE bookmark SET projectid=?, name=?, bookid=?, chapterid=?, spid=? WHERE bookmarkid=?;";
             window.Application.db.transaction(function (tx) {
                 //JSON.stringify(attributes.chapters)
-                tx.executeSql(sql, [attributes.bookname, attributes.bookid, attributes.chapterid, attributes.spid, attributes.bookmarkid], function (tx, res) {
+                tx.executeSql(sql, [attributes.projectid, attributes.name, attributes.bookid, attributes.chapterid, attributes.spid, attributes.bookmarkid], function (tx, res) {
                     console.log("bookmark UPDATE ok: " + res.toString());
                 }, function (tx, err) {
                     console.log("bookmark UPDATE error: " + err.message);
@@ -346,7 +346,7 @@ define(function (require) {
                 len = 0;
     
             window.Application.db.transaction(function (tx) {
-                tx.executeSql('CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, bookname text, bookid integer, chapterid integer, spid text);');
+                tx.executeSql('CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, name text, bookid text, chapterid text, spid text);');
                 tx.executeSql("SELECT * from bookmark;", [], function (tx, res) {
                     for (i = 0, len = res.rows.length; i < len; ++i) {
                         // add the bookmark
@@ -388,7 +388,7 @@ define(function (require) {
                     });
                 } else if (options.data.hasOwnProperty('projectid')) {
                     var deferred = $.Deferred();
-                    var username = options.data.projectid;
+                    var projectid = options.data.projectid;
                     var len = 0;
                     var i = 0;
                     var retValue = null;
@@ -437,6 +437,8 @@ define(function (require) {
                     }
                     // return the promise
                     return deferred.promise();
+                } else {
+                    return Backbone.sync.apply(this, arguments);
                 }
             }
         }
