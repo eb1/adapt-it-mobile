@@ -34,6 +34,7 @@ define(function (require) {
         usfm        = require('utils/usfm'),
         langs       = require('langtags'),
         fontModel   = require('app/models/font'),
+        userModels  = require('app/models/user'),
         innerHtml   = "",
         step        = 1,
         currentView = null,
@@ -202,7 +203,7 @@ define(function (require) {
                 var model = this.model;
                 model.save();
                 // is there already a current project?
-                if (window.Application.currentProject !== null) {
+                if (window.Application.currentProject) {
                     // YES -- ask if they want to switch
                     if (navigator.notification) {
                         // on mobile device -- use notification plugin API
@@ -1831,7 +1832,7 @@ define(function (require) {
                         // last step -- finish up
                         // save the model
                         this.model.save();
-                        if (window.Application.currentProject !== null) {
+                        if (window.Application.currentProject) {
                             // There's already a project defined. Clear out any local 
                             // chapter/book/sourcephrase/KB stuff so it loads from our new project instead
                             window.Application.BookList.length = 0;
@@ -1839,6 +1840,22 @@ define(function (require) {
                             window.Application.spList.length = 0;
                             window.Application.kbList.length = 0;
                         }
+                        // create a new bookmark, and set it to be our current one
+                        var bookmarks = window.Application.user.get("bookmarks");
+                        var bookmarkid = window.Application.generateUUID();
+                        var newBookmark = new userModels.Bookmark({
+                            bookmarkid: bookmarkid,
+                            projectid: this.model.get('projectid') // note: no books, chapters, spid set
+                        });
+                        // save and add to the collection
+                        newBookmark.save();
+                        window.Application.currentBookmark = newBookmark;
+                        window.Application.bookmarkList.add(newBookmark);
+                        // update the user's bookmarks array
+                        bookmarks.push(bookmarkid);
+                        window.Application.user.set("bookmarks", bookmarks, {silent: true});
+                        window.Application.user.update();
+
                         // set the current project to our new one
                         window.Application.currentProject = this.model;
                         localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));

@@ -152,8 +152,8 @@ define(function (require) {
             onShow: function () {
                 console.log("HomeView::onShow() entry");
                 // only check KB if we have a current project defined
-                if (window.Application.currentProject !== null) {
-                    window.Application.setUserAndBookmarks().done(this.updateActions);
+                if (window.Application.currentProject) {
+                    window.Application.setBookmarks().done(this.updateActions);
                 }
 
                 clickCount = 0;

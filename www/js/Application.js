@@ -38,8 +38,8 @@ define(function (require) {
         models          = [],
         DB_NAME         = "AIM",
         db_dir          = "",
+        LOCAL_USER      = "LocalUser",  // user for local AIM db
         locale          = "en-AU",  // default
-
 
         // Utility function from https://gist.github.com/nikdo/1b62c355dae50df6410109406689cd6e
         // https://stackoverflow.com/a/35940276/5763764
@@ -255,16 +255,15 @@ define(function (require) {
             // Callback to finish initialization once the AIM database has successfully been created / opened.
             // This code was moved from initialize() above, and is called from there once the DB is okay to use.
             onInitDB: function () {
-                // callback function to initialize / load the localization info
+                // Method initialize localization for the app. Calls init_collections_and_go once complete.
                 var initialize_i18n = function (locale) {
                     i18n.init({
                         lng: locale,
                         debug: true,
                         fallbackLng: 'en'
                     }, function () {
-                        // Callback when i18next is finished initializing
                         var IMPORTED_KB_FILE = "**ImportedKBFile**";
-
+                        // Localization done -- 
                         // Create the app-wide collections
                         window.Application.ProjectList = new projModel.ProjectCollection();
                         window.Application.BookList = new bookModel.BookCollection();
@@ -272,15 +271,48 @@ define(function (require) {
                         window.Application.kbList = new kbModels.TargetUnitCollection();
                         window.Application.spList = new spModel.SourcePhraseCollection();
                         window.Application.bookmarkList = new userModels.BookmarkCollection();
-                        // Note on these collections:
+                        // (Note on these collections:
                         // The ProjectList is populated at startup in home() below; if there is a current project,
                         // the books, chapters, and KB are loaded for the current project in home() as well.   
                         // The sourcephrases are not held as an app-wide collection (for a NT, this could result in ~300MB of memory) --
                         // Instead, they are instantiated on the pages that need them
-                        // (DocumentViews for doc import/export and AdaptViews for adapting)
+                        // (DocumentViews for doc import/export and AdaptViews for adapting))
 
-                        // Tell backbone we're ready to start loading the View classes.
-                        Backbone.history.start();
+                        // check the local db for our LocalUser; create if needed
+                        var userList = new userModels.UserCollection();
+                        $.when(userList.fetch({reset: true, data: {username: ""}})).done(function () {
+                            console.log("userList length: " + userList.length);
+                            var localUser = userList.findWhere({username: LOCAL_USER});
+                            if (localUser === undefined) {
+                                console.log("init_collections_and_go() - No local user, creating");
+                                var userid = window.Application.generateUUID();
+                                localUser = new userModels.User({
+                                    username: LOCAL_USER,
+                                    userid: userid,
+                                    roles: [],
+                                    bookmarks: [],
+                                    copysource: 0,
+                                    wrapusfm: 0,
+                                    stopatboundaries: 0,
+                                    alloweditblanksp: 0,
+                                    showtranslationchecks: 0,
+                                    defaultfttarget: 0,
+                                    uilang: 0,
+                                    darkmode: 1,
+                                    wordspacing: 2
+                                });
+                                // save the user to the DB
+                                localUser.save();
+                                window.Application.user = localUser;            
+                            } else {
+                                // there's a local user set in the DB - use it
+                                console.log("init_collections_and_go() - found local user, setting");
+                                window.Application.user = localUser;
+                            }
+                            // Startup initialization is complete
+                            // Tell backbone we're ready to start loading the View classes.
+                            Backbone.history.start();
+                        });                        
                     });
                 };
                 // create model collections off the Application object
@@ -321,9 +353,10 @@ define(function (require) {
                     window.history.back();
                 });
             },
-            
+
             onStart: function (app, options) {
                 // check the database schema now that we've created / opened it
+                // this.checkDBSchema();
             },
             
             checkDBSchema: function () {
@@ -332,100 +365,79 @@ define(function (require) {
                 return projModel.checkSchema();
             },
 
-            // populate the Application.user and Application.bookmarkList,
-            // creating them if we're upgrading from a previous release
-            setUserAndBookmarks: function () {
+            // Helper method to populate Application.bookmarkList:
+            // - If we're upgrading from a previous release, the LastAdapted<x> properties in the project collection
+            //   get copied over to new bookmark objects in our DB, as well as to a "bookmarks" array property for 
+            //   window.Application.user
+            // This method is called from HomeViews:OnShow() before rendering the search/adapt links
+            setBookmarks: function () {
                 var deferred = $.Deferred();
                 // Each AIM instance has a local user associated with the project(s) in the local DB
-                console.log("setUserAndBookmarks() - entry");
-                var userList = new userModels.UserCollection();
-                console.log("setUserAndBookmarks() - userList created");
-                userList.fetch({data: {username: ""}, 
-                    success: function() {
-                    console.log ("setUserAndBookbarks() - fetch return");
-                    if (window.Application.user) {
-                        console.log("setUserAndBookmarks() - user already set - skipping");
-                    } else {
-                        // no local user set -- see if there's an existing user in the DB for us
-                        if (userList.length === 0) {
-                            console.log("No local user - creating");
-                            var userid = window.Application.generateUUID();
-                            var localUser = new userModels.User({
-                                username: "LocalUser",
-                                userid: userid,
-                                roles: [],
-                                bookmarks: [],
-                                copysource: 0,
-                                wrapusfm: 0,
-                                stopatboundaries: 0,
-                                alloweditblanksp: 0,
-                                showtranslationchecks: 0,
-                                defaultfttarget: 0,
-                                uilang: 0,
-                                darkmode: 1,
-                                wordspacing: 2
-                            });
-                            // save the user to the DB
-                            localUser.save();
-                            window.Application.user = localUser;
-                        } else {
-                            // set local user
-                            console.log("setUserAndBookmarks() - existing user");
-                            window.Application.user = userList.at(0);
-                        }
-    
-                    }
-                    console.log("setUserAndBookmarks() - user: " + window.Application.user.get('username'));
+                console.log("setBookmarks() - entry");
+                // sanity check -- make sure window.Application.user is set
+                if (window.Application.user === null) {
+                    console.log("setBookmarks() error -- no local user set, exiting");
+                    return;
+                }
 
-                    // verify / update the bookmark list
-                    if (window.Application.user.get("bookmarks").length === 0) {
-                        console.log("setUserAndBookmarks() - user has no bookmarks set; setting for each project (if there are any)");
-                        var bookmarks = window.Application.user.get("bookmarks"); // s/b empty array of bookmarkids, not collection
-                        if (window.Application.ProjectList.length > 0) {
-                            window.Application.ProjectList.each(function (model, index) {
-                                // If we're here, we're likely upgrading from a previous version of AIM, and the project _should_
-                                // have the info to populate this bookmark (leave blank if not)
-                                var bookmarkid = window.Application.generateUUID();
-                                var newBookmark = new userModels.Bookmark({
-                                    bookmarkid: bookmarkid,
-                                    projectid: model.get('projectid'),
-                                    name: (model.get('lastAdaptedName').length > 0) ? model.get('lastAdaptedName') : "",
-                                    bookid: (model.get('lastAdaptedBookID').length > 0) ? model.get('lastAdaptedBookID') : "",
-                                    chapterid: (model.get('lastAdaptedChapterID').length > 0) ? model.get('lastAdaptedChapterID') : "",
-                                    spid: (model.get('lastAdaptedSPID').length > 0) ? model.get('lastAdaptedSPID') : ""
-                                });
-                                // save and add to the collection
-                                newBookmark.save();
-                                if (model.get('projectid') === window.Application.currentProject.get('projectid')) {
-                                    // this is the current project -- set this bookmark as the current bookmark
-                                    console.log("serUserAndBookmarks() - also setting current bookmark: " + bookmarkid + " for projectid: " + model.get('projectid'));
-                                    window.Application.currentBookmark = newBookmark;
-                                }
-                                window.Application.bookmarkList.add(newBookmark);
-                                // add this to the user's bookmarkid array
-                                bookmarks.push(bookmarkid);
+                // verify / update the bookmark list
+                if (window.Application.user.get("bookmarks").length === 0) {
+                    console.log("setBookmarks() - user has no bookmarks set; setting for each project (if there are any)");
+                    var bookmarks = window.Application.user.get("bookmarks"); // s/b empty array of bookmarkids, not collection
+                    if (window.Application.ProjectList.length > 0) {
+                        window.Application.ProjectList.each(function (model, index) {
+                            // If we're here, we're likely upgrading from a previous version of AIM, and the project _should_
+                            // have the info to populate this bookmark (leave blank if not)
+                            var bookmarkid = window.Application.generateUUID();
+                            var newBookmark = new userModels.Bookmark({
+                                bookmarkid: bookmarkid,
+                                projectid: model.get('projectid'),
+                                name: (model.get('lastAdaptedName').length > 0) ? model.get('lastAdaptedName') : "",
+                                bookid: (model.get('lastAdaptedBookID').length > 0) ? model.get('lastAdaptedBookID') : "",
+                                chapterid: (model.get('lastAdaptedChapterID').length > 0) ? model.get('lastAdaptedChapterID') : "",
+                                spid: (model.get('lastAdaptedSPID').length > 0) ? model.get('lastAdaptedSPID') : ""
                             });
-                            // done looping through the project list -- update the user's bookmarks
-                            window.Application.user.set("bookmarks", bookmarks, {silent: true});
-                            window.Application.user.update();
-                            // done populating user/bookmarks
-                            deferred.resolve();
-                        } else {
-                            console.log("No bookmarks added (no projects in list)");
-                            deferred.resolve();
-                        }
-                    } else {
-                        console.log("setUserAndBookmarks() - user bookmarks set");
-                        // there should be a bookmarkid in the user's bookmark array that points to the current project -
-                        // set our current bookmark to that one
-                        window.Application.bookmarkList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}).then(function () {
-                            console.log("setUserAndBookmarks() - bookmark list retrieved, length: " + window.Application.bookmarkList.length);
-                            window.Application.currentBookmark = window.Application.bookmarkList.at(0);
-                            // window.Application.currentBookmark = window.Application.user.get("bookmarks")
-                            deferred.resolve();    
+                            // save and add to the collection
+                            newBookmark.save();
+                            if (model.get('projectid') === window.Application.currentProject.get('projectid')) {
+                                // this is the current project -- set this bookmark as the current bookmark
+                                console.log("setBookmarks() - also setting current bookmark: " + bookmarkid + " for projectid: " + model.get('projectid'));
+                                window.Application.currentBookmark = newBookmark;
+                            }
+                            window.Application.bookmarkList.add(newBookmark);
+                            // add this to the user's bookmarkid array
+                            bookmarks.push(bookmarkid);
                         });
+                        // done looping through the project list -- update the user's bookmarks
+                        window.Application.user.set("bookmarks", bookmarks, {silent: true});
+                        window.Application.user.update();
+                        // done populating user/bookmarks
+                        deferred.resolve();
+                    } else {
+                        console.log("No bookmarks added (no projects in list)");
+                        deferred.resolve();
                     }
-                }});
+                } else {
+                    console.log("setBookmarks() - user has bookmarks defined");
+                    // there should be a bookmarkid in the user's bookmark array that points to the current project -
+                    // set our current bookmark to that one
+                    window.Application.bookmarkList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}).then(function () {
+                        console.log("setBookmarks() - bookmark list retrieved, length: " + window.Application.bookmarkList.length);
+                        window.Application.ProjectList.each(function (model, index) {
+                            if (window.Application.user.get("bookmarks").indexOf(model.get("bookmarkid")) > -1) {
+                                // this bookmark is in the user's list -- set it as the current bookmark
+                                console.log("setBookmarks() - found matching bookmark, setting");
+                                window.Application.currentBookmark = model;
+                                deferred.resolve();
+                                return;
+                            }
+                        });
+                        // if we got here, we didn't find a valid bookmark. TDB - error?
+                        console.log("setBookmarks() - didn't find a matching bookmark, setting to the first in the list");
+                        window.Application.currentBookmark = window.Application.bookmarkList.at(0);
+                        deferred.resolve();    
+                    });
+                }
 
                 return deferred.promise();
             },
@@ -455,14 +467,14 @@ define(function (require) {
                     if (models.length > 0) {
                         window.Application.ProjectList.remove(models);
                     }
-                    if (window.Application.currentProject === null) {
+                    if (!window.Application.currentProject) {
                         console.log("Home() - No current project set");
                         // check to see if we saved a current project
                         if (localStorage.getItem("CurrentProjectID")) {
                             console.log("Attempting to use CurrentProjectID from local storage");
                             window.Application.currentProject = window.Application.ProjectList.where({projectid: localStorage.getItem("CurrentProjectID")})[0];
                         }
-                        if (window.Application.currentProject === null) {
+                        if (!window.Application.currentProject) {
                             // project list was a dud. Set to the first item in the list if we can
                             console.log("No localStorage, or attempt to set failed. Trying the first item in the project list (if there is one)");
                             // pick the first project in the list, if there is one
