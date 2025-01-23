@@ -202,6 +202,21 @@ define(function (require) {
                 // save the model
                 var model = this.model;
                 model.save();
+                // create a bookmark for this project
+                var bookmarkid = window.Application.generateUUID();
+                var newBookmark = new userModels.Bookmark({
+                    bookmarkid: bookmarkid,
+                    projectid: model.get('projectid') // name, book, chapter are not known yet
+                });
+                // save and add to the collection
+                newBookmark.save();
+                window.Application.bookmarkList.add(newBookmark);
+                // add this to the user's bookmarkid array
+                var bookmarks = window.Application.user.get("bookmarks");
+                bookmarks.push(bookmarkid);
+                window.Application.user.set("bookmarks", bookmarks, {silent: true});
+                window.Application.user.update();
+
                 // is there already a current project?
                 if (window.Application.currentProject) {
                     // YES -- ask if they want to switch
@@ -221,6 +236,8 @@ define(function (require) {
                                     window.Application.ChapterList.length = 0;
                                     window.Application.spList.length = 0;
                                     window.Application.kbList.length = 0;
+                                    // also set the current bookmark
+                                    window.Application.currentBookmark = newBookmark;
                                 } else {
                                     // No -- just exit
                                 }
@@ -241,6 +258,8 @@ define(function (require) {
                             window.Application.ChapterList.length = 0;
                             window.Application.spList.length = 0;
                             window.Application.kbList.length = 0;
+                            // also set the current bookmark
+                            window.Application.currentBookmark = newBookmark;
                         } else {
                             // No -- just exit
                         }
@@ -253,6 +272,8 @@ define(function (require) {
                         localStorage.setItem("CurrentProjectID", projid);
                         window.Application.currentProject = window.Application.ProjectList.where({projectid: projid});;
                     }
+                    // also set the current bookmark
+                    window.Application.currentBookmark = newBookmark;
                     // head back to the home page
                     window.location.replace("");
                 }
