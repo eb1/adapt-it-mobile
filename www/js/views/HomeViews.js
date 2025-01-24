@@ -153,6 +153,12 @@ define(function (require) {
                 console.log("HomeView::onShow() entry");
                 // only check KB if we have a current project defined
                 if (window.Application.currentProject) {
+                    if (window.Application.kbList.length === 0) {
+                        window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}});
+                    }
+                    if (window.Application.BookList.length === 0) {
+                        window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
+                    }
                     window.Application.setBookmarks().done(this.updateActions);
                 }
 

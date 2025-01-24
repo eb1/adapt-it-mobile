@@ -461,7 +461,6 @@ define(function (require) {
                             models.push(model);
                         }
                     });
-                    var defer = $.Deferred();
 
                     // remove the half-completed project objects
                     if (models.length > 0) {
@@ -485,45 +484,30 @@ define(function (require) {
                             }
                         }                        
                     }
-                    // Is there a current project? 
-                    if ((window.Application.currentProject !== undefined) && (window.Application.currentProject !== null)) {
-                        // there's a "real" current project -- load the books, chapter
-                        console.log("currentProject: " + window.Application.currentProject.get("projectid"));
-                        window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}})
-                            .then(window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}))
-                            .then(window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}))
-                            .then(defer.resolve("home() - current project data loaded"));
-                    } else {
-                        // no current project -- just resolve
-                        defer.resolve("home() - no current project; continuing");                        
-                    }
                     // Did another task launch us (i.e., did our handleOpenURL() from main.js
                     // get called)? If so, pull out the URL and process the resulting file
-                    defer.then(function (msg) {
-                        console.log(msg);
-                        var shareURL = window.localStorage.getItem('share_url');
-                        if (shareURL && shareURL.length > 0) {
-                            console.log("Found stored URL to process:" + shareURL);
-                            window.localStorage.removeItem('share_url'); // clear out value
-                            if (shareURL.indexOf("content:") !== -1) {
-                                // content://path from Android 
-                                window.FilePath.resolveNativePath(shareURL, function(absolutePath) {
-                                    window.Application.importingURL = absolutePath;
-                                    window.resolveLocalFileSystemURL(shareURL, window.Application.processFileEntry, window.Application.processError);
-                                });
-                            } else {
-                                // not a content://path url -- resolve and process file
-                                window.Application.importingURL = "";
+                    var shareURL = window.localStorage.getItem('share_url');
+                    if (shareURL && shareURL.length > 0) {
+                        console.log("Found stored URL to process:" + shareURL);
+                        window.localStorage.removeItem('share_url'); // clear out value
+                        if (shareURL.indexOf("content:") !== -1) {
+                            // content://path from Android 
+                            window.FilePath.resolveNativePath(shareURL, function(absolutePath) {
+                                window.Application.importingURL = absolutePath;
                                 window.resolveLocalFileSystemURL(shareURL, window.Application.processFileEntry, window.Application.processError);
-                            }
+                            });
                         } else {
-                            // No pending import requests -- display the home view
-                            console.log("creating home view");
-                            homeView = new HomeViews.HomeView({model: window.Application.currentProject});
-                            homeView.delegateEvents();
-                            window.Application.main.show(homeView);
+                            // not a content://path url -- resolve and process file
+                            window.Application.importingURL = "";
+                            window.resolveLocalFileSystemURL(shareURL, window.Application.processFileEntry, window.Application.processError);
                         }
-                    });
+                    } else {
+                        // No pending import requests -- display the home view
+                        console.log("creating home view");
+                        homeView = new HomeViews.HomeView({model: window.Application.currentProject});
+                        homeView.delegateEvents();
+                        window.Application.main.show(homeView);
+                    }
                 });
             },
             // Set UI language view (language can also be set within project settings / edit project view > UI settings)
