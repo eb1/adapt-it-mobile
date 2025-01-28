@@ -731,7 +731,7 @@ define(function (require) {
                                     // we have a current bookmark -- update it
                                     window.Application.currentBookmark.set('name', chapter.get('name'));
                                     window.Application.currentBookmark.set('bookid', book.get('bookid'));
-                                    window.Application.currentBookmark.set('chapterid', book.get('chapterid'));
+                                    window.Application.currentBookmark.set('chapterid', chapter.get('chapterid'));
                                 }
                             }
                             window.Application.main.show(theView);
