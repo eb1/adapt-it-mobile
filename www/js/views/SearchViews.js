@@ -1225,8 +1225,14 @@ define(function (require) {
 
             onShow: function () {
                 var lstBooks = "";
-                this.bookList.fetch({reset: true, data: {projectid: this.model.get('projectid')}});
-                this.chapterList.fetch({reset: true, data: {projectid: this.model.get('projectid')}});
+                // _should_ always have books listed when first displaying (from homeView available actions)
+                // check the chapterList and optionally fetch
+                if (window.Application.ChapterList.length === 0) {
+                    console.log("SearchViews:onShow() - need to refresh the chapter list");
+                    window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
+                }
+                this.bookList = window.Application.BookList;
+                this.chapterList = window.Application.ChapterList;
                 // initial sort - name
                 this.bookList.comparator = 'name';
                 this.bookList.sort();

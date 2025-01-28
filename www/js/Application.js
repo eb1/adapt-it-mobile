@@ -675,20 +675,16 @@ define(function (require) {
                     window.Application.main.show(exportDocView);
                 }
             },
-            // Search / browse chapter view
+            // Search / browse chapter view -- all books/chapters in current project
             lookupChapter: function (id) {
                 console.log("lookupChapter");
-                $.when(window.Application.ProjectList.fetch({reset: true, data: {name: ""}})).done(function () {
-                    $.when(window.Application.ChapterList.fetch({reset: true, data: {name: ""}})).done(function () {
-                        var proj = window.Application.ProjectList.where({projectid: id});
-                        if (proj !== null) {
-                            lookupView = new SearchViews.LookupView({model: proj[0]});
-                            window.Application.main.show(lookupView);
-                        } else {
-                            console.log("no project defined");
-                        }
-                    });
-                });
+                var proj = window.Application.ProjectList.where({projectid: id});
+                if (proj !== null) {
+                    lookupView = new SearchViews.LookupView({model: proj[0]});
+                    window.Application.main.show(lookupView);
+                } else {
+                    console.log("no project defined");
+                }
             },
             // Adapt View (the reason we're here)
             adaptChapter: function (id) {
