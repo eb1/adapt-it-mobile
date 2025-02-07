@@ -34,6 +34,7 @@ define(function (require) {
         usfm        = require('utils/usfm'),
         langs       = require('langtags'),
         fontModel   = require('app/models/font'),
+        userModels  = require('app/models/user'),
         innerHtml   = "",
         step        = 1,
         currentView = null,
@@ -201,8 +202,23 @@ define(function (require) {
                 // save the model
                 var model = this.model;
                 model.save();
+                // create a bookmark for this project
+                var bookmarkid = window.Application.generateUUID();
+                var newBookmark = new userModels.Bookmark({
+                    bookmarkid: bookmarkid,
+                    projectid: model.get('projectid') // name, book, chapter are not known yet
+                });
+                // save and add to the collection
+                newBookmark.save();
+                window.Application.bookmarkList.add(newBookmark);
+                // add this to the user's bookmarkid array
+                var bookmarks = window.Application.user.get("bookmarks");
+                bookmarks.push(bookmarkid);
+                window.Application.user.set("bookmarks", bookmarks, {silent: true});
+                window.Application.user.update();
+
                 // is there already a current project?
-                if (window.Application.currentProject !== null) {
+                if (window.Application.currentProject) {
                     // YES -- ask if they want to switch
                     if (navigator.notification) {
                         // on mobile device -- use notification plugin API
@@ -220,6 +236,8 @@ define(function (require) {
                                     window.Application.ChapterList.length = 0;
                                     window.Application.spList.length = 0;
                                     window.Application.kbList.length = 0;
+                                    // also set the current bookmark
+                                    window.Application.currentBookmark = newBookmark;
                                 } else {
                                     // No -- just exit
                                 }
@@ -240,6 +258,8 @@ define(function (require) {
                             window.Application.ChapterList.length = 0;
                             window.Application.spList.length = 0;
                             window.Application.kbList.length = 0;
+                            // also set the current bookmark
+                            window.Application.currentBookmark = newBookmark;
                         } else {
                             // No -- just exit
                         }
@@ -252,6 +272,8 @@ define(function (require) {
                         localStorage.setItem("CurrentProjectID", projid);
                         window.Application.currentProject = window.Application.ProjectList.where({projectid: projid});;
                     }
+                    // also set the current bookmark
+                    window.Application.currentBookmark = newBookmark;
                     // head back to the home page
                     window.location.replace("");
                 }
@@ -1831,7 +1853,7 @@ define(function (require) {
                         // last step -- finish up
                         // save the model
                         this.model.save();
-                        if (window.Application.currentProject !== null) {
+                        if (window.Application.currentProject) {
                             // There's already a project defined. Clear out any local 
                             // chapter/book/sourcephrase/KB stuff so it loads from our new project instead
                             window.Application.BookList.length = 0;
@@ -1839,6 +1861,22 @@ define(function (require) {
                             window.Application.spList.length = 0;
                             window.Application.kbList.length = 0;
                         }
+                        // create a new bookmark, and set it to be our current one
+                        var bookmarks = window.Application.user.get("bookmarks");
+                        var bookmarkid = window.Application.generateUUID();
+                        var newBookmark = new userModels.Bookmark({
+                            bookmarkid: bookmarkid,
+                            projectid: this.model.get('projectid') // note: no books, chapters, spid set
+                        });
+                        // save and add to the collection
+                        newBookmark.save();
+                        window.Application.currentBookmark = newBookmark;
+                        window.Application.bookmarkList.add(newBookmark);
+                        // update the user's bookmarks array
+                        bookmarks.push(bookmarkid);
+                        window.Application.user.set("bookmarks", bookmarks, {silent: true});
+                        window.Application.user.update();
+
                         // set the current project to our new one
                         window.Application.currentProject = this.model;
                         localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));

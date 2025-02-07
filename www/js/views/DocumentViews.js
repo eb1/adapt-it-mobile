@@ -28,6 +28,7 @@ define(function (require) {
         spModel         = require('app/models/sourcephrase'),
         chapModel       = require('app/models/chapter'),
         kbModels        = require('app/models/targetunit'),
+        userModels      = require('app/models/user'),
         scrIDs          = require('utils/scrIDs'),
         USFM            = require('utils/usfm'),
         kblist          = null, // populated in onShow
@@ -456,17 +457,28 @@ define(function (require) {
                         versecount: 0
                     });
                     chapters.add(chapter);
-                    // set the lastDocument / lastAdapted<xxx> values if not already set
-                    if (project.get('lastDocument') === "") {
-                        project.set('lastDocument', bookName);
+                    // set the current bookmark if not already set
+                    if (window.Application.currentBookmark === null) {
+                        var bookmarkid = window.Application.generateUUID();
+                        var newBookmark = new userModels.Bookmark({
+                            bookmarkid: bookmarkid,
+                            projectid: project.get('projectid'),
+                            name: bookName,
+                            bookid: bookID,
+                            chapterid: chapterID // note: no spID set (will start at beginning)
+                        });
+                        // save and add to the collection
+                        newBookmark.save();
+                        window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", bookName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
                     }
-                    if (project.get('lastAdaptedBookID') === 0) {
-                        project.set('lastAdaptedBookID', bookID);
-                        project.set('lastAdaptedChapterID', chapterID);
-                    }
-                    if (project.get('lastAdaptedName') === "") {
-                        project.set('lastAdaptedName', bookName);
-                    }
+
                     // parse the text file and create the SourcePhrases
                     // insert special <p> for linefeeds, then split on whitespace (doesn't keep whitespace)
                     arr = contents.replace(newline, " <p> ").split(spaceRE);
@@ -972,16 +984,26 @@ define(function (require) {
                         versecount: 0
                     });
                     chapters.add(chapter);
-                    // set the lastDocument / lastAdapted<xxx> values if not already set
-                    if (project.get('lastDocument') === "") {
-                        project.set('lastDocument', bookName);
-                    }
-                    if (project.get('lastAdaptedBookID') === 0) {
-                        project.set('lastAdaptedBookID', bookID);
-                        project.set('lastAdaptedChapterID', chapterID);
-                    }
-                    if (project.get('lastAdaptedName') === "") {
-                        project.set('lastAdaptedName', chapterName);
+                    // set the current bookmark if not already set
+                    if (window.Application.currentBookmark === null) {
+                        var bookmarkid = window.Application.generateUUID();
+                        var newBookmark = new userModels.Bookmark({
+                            bookmarkid: bookmarkid,
+                            projectid: project.get('projectid'),
+                            name: chapterName,
+                            bookid: bookID,
+                            chapterid: chapterID // note: no spID set (will start at beginning)
+                        });
+                        // save and add to the collection
+                        newBookmark.save();
+                        window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
                     }
                     // now read the contents of the file
                     parseNode($($xml).find("usx"));
@@ -2197,16 +2219,26 @@ define(function (require) {
                         versecount: 0
                     });
                     chapters.add(chapter);
-                    // set the lastDocument / lastAdapted<xxx> values if not already set
-                    if (project.get('lastDocument') === "") {
-                        project.set('lastDocument', bookName);
-                    }
-                    if (project.get('lastAdaptedBookID') === 0) {
-                        project.set('lastAdaptedBookID', bookID);
-                        project.set('lastAdaptedChapterID', chapterID);
-                    }
-                    if (project.get('lastAdaptedName') === "") {
-                        project.set('lastAdaptedName', chapterName);
+                    // set the current bookmark if not already set
+                    if (window.Application.currentBookmark === null) {
+                        var bookmarkid = window.Application.generateUUID();
+                        var newBookmark = new userModels.Bookmark({
+                            bookmarkid: bookmarkid,
+                            projectid: project.get('projectid'),
+                            name: chapterName,
+                            bookid: bookID,
+                            chapterid: chapterID // note: no spID set (will start at beginning)
+                        });
+                        // save and add to the collection
+                        newBookmark.save();
+                        window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
                     }
                     // create the sourcephrases
                     var $xml = $(xmlDoc);
@@ -3324,15 +3356,28 @@ define(function (require) {
                                     // If we actually had some content in our previous chapter, we can set the lastAdaptedXXX values
                                     // if they aren't already set
                                     if (verseCount > 0) {
-                                        if (project.get('lastDocument') === "") {
-                                            project.set('lastDocument', bookName);
-                                        }
-                                        if (project.get('lastAdaptedBookID') === 0) {
-                                            project.set('lastAdaptedBookID', bookID);
-                                            project.set('lastAdaptedChapterID', chapterID);
-                                        }
-                                        if (project.get('lastAdaptedName') === "") {
-                                            project.set('lastAdaptedName', chapterName);
+                                        // set the current bookmark if not already set
+                                        if (window.Application.currentBookmark === null) {
+                                            console.log("readUSFMDoc() - creating bookmark");
+                                            var bookmarkid = window.Application.generateUUID();
+                                            var newBookmark = new userModels.Bookmark({
+                                                bookmarkid: bookmarkid,
+                                                projectid: project.get('projectid'),
+                                                name: chapterName,
+                                                bookid: bookID,
+                                                chapterid: chapterID // note: no spID set (will start at beginning)
+                                            });
+                                            // save and add to the collection
+                                            newBookmark.save();
+                                            window.Application.bookmarkList.add(newBookmark);
+                                            window.Application.currentBookmark = newBookmark;
+                                        } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                                            console.log("readUSFMDoc() - updating bookmark for book: " + bookName);
+                                            // project is set, but the book / chapter values are not set -- set them now
+                                            window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                                            window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                                            window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                                            window.Application.currentBookmark.update();
                                         }
                                     }
                                     // update the last adapted for the previous chapter before closing it out
@@ -3770,16 +3815,27 @@ define(function (require) {
                         // Special case: a single chapter import into a new project
                         // (verseCount ends up > 0, and the lastAdaptedXXX aren't set yet)
                         if (verseCount > 0) {
-                            if (project.get('lastDocument') === "") {
-                                project.set('lastDocument', bookName);
-                            }
-                            if (project.get('lastAdaptedBookID') === 0) {
-                                project.set('lastAdaptedBookID', bookID);
-                                project.set('lastAdaptedChapterID', chapterID);
-                            }
-                            if (project.get('lastAdaptedName') === "") {
-                                project.set('lastAdaptedName', chapterName);
-                            }
+                            // set the current bookmark if not already set
+                            if (window.Application.currentBookmark === null) {
+                                var bookmarkid = window.Application.generateUUID();
+                                var newBookmark = new userModels.Bookmark({
+                                    bookmarkid: bookmarkid,
+                                    projectid: project.get('projectid'),
+                                    name: chapterName,
+                                    bookid: bookID,
+                                    chapterid: chapterID // note: no spID set (will start at beginning)
+                                });
+                                // save and add to the collection
+                                newBookmark.save();
+                                window.Application.bookmarkList.add(newBookmark);
+                                window.Application.currentBookmark = newBookmark;
+                            } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                                // project is set, but the book / chapter values are not set -- set them now
+                                window.Application.currentBookmark.set("name", chapterName, {silent: true});
+                                window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                                window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                                window.Application.currentBookmark.update();
+                            }                       
                         }
                         // update the verse count for this chapter before closing it out
                         if (chapter.get('versecount') < verseCount) {
@@ -4073,7 +4129,7 @@ define(function (require) {
                 var idxFilters = 0;
                 var value = null;
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
-                var lastSPID = window.Application.currentProject.get('lastAdaptedSPID');
+                var lastSPID = window.Application.currentBookmark.get('spid');
                 var chaptersLeft = chapters.length;
                 var filtered = false;
                 var needsEndMarker = "";
@@ -4190,7 +4246,7 @@ define(function (require) {
                 var mkr = "";
                 var bDirty = false;
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
-                var lastSPID = window.Application.currentProject.get('lastAdaptedSPID');
+                var lastSPID = window.Application.currentBookmark.get('spid');
                 console.log("buildUSFM: entry");
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -4330,7 +4386,7 @@ define(function (require) {
                 var needsEndMarker = "";
                 var mkr = "";
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
-                var lastSPID = window.Application.currentProject.get('lastAdaptedSPID');
+                var lastSPID = window.Application.currentBookmark.get('spid');
                 var bDirty = false;
                 console.log("buildUSFMGloss: entry");
                 markerList.fetch({reset: true, data: {name: ""}});
@@ -4462,7 +4518,7 @@ define(function (require) {
                 var needsEndMarker = "";
                 var mkr = "";
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
-                var lastSPID = window.Application.currentProject.get('lastAdaptedSPID');
+                var lastSPID = window.Application.currentBookmark.get('spid');
                 var bDirty = false;
                 console.log("buildUSFMFT: entry");
                 markerList.fetch({reset: true, data: {name: ""}});
@@ -4589,7 +4645,7 @@ define(function (require) {
                 var spList = new spModel.SourcePhraseCollection();
                 var markerList = new USFM.MarkerCollection();
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
-                var lastSPID = window.Application.currentProject.get('lastAdaptedSPID');
+                var lastSPID = window.Application.currentBookmark.get('spid');
                 var filtered = false;
                 var exportMarkers = false;
                 var isPeriphBlock = false;
@@ -6210,9 +6266,10 @@ define(function (require) {
             onCancel: function () {
                 // User is cancelling the import operation -- roll back and go home
                 var deletedCurrentDoc = false;
-                var lastAdaptedBookID = window.Application.currentProject.get('lastAdaptedBookID').toString();
-                if (isKB === false) {
+                var lastAdaptedBookID = "";
+                if (isKB === false && window.Application.currentBookmark !== null) {
                     // can only really roll back a book import (by deleting it)
+                    lastAdaptedBookID = window.Application.currentBookmark.get('bookid');
                     var book = window.Application.BookList.where({projectid: this.model.get('projectid'), filename: fileName})[0];
                     if (book) {
                         // got as far as saving the book -- did we happen to set this to the current book?
@@ -6230,29 +6287,33 @@ define(function (require) {
                         // Now do any extra processing to reset the last document, etc...
                         // Did we just delete all the books?
                         if (window.Application.BookList.length === 0) {
-                            // no books left in the list -- clear out the last adapted chapter and book
-                            window.Application.currentProject.set('lastDocument', "");
-                            window.Application.currentProject.set('lastAdaptedBookID', 0);
-                            window.Application.currentProject.set('lastAdaptedChapterID', 0);
-                            window.Application.currentProject.save();
+                            // no more books -- also remove the bookmark
+                            window.Application.bookmarkList.remove(window.Application.currentBookmark);                
+                            window.Application.currentBookmark = null;
                         } else if (deletedCurrentDoc === true) {
-                            // we deleted the current doc, BUT there are other books in the book list --
-                            // reset the current chapter and book to the first book in our collection                
+                            // We just deleted the current Document/book
+                            window.Application.bookmarkList.remove(window.Application.currentBookmark);                
+                            window.Application.currentBookmark = null;
+                            // create a bookmark pointing to the first chapter of the first book in our book list
                             var bk = window.Application.BookList.at(0);
                             if (bk) {
+                                // got it -- set the lastAdapted stuff to the first chapter
                                 var cid = bk.get("chapters")[0];
-                                window.Application.currentProject.set('lastDocument', bk.get("name"));
-                                window.Application.currentProject.set('lastAdaptedBookID', bk.get("bookid"));
-                                window.Application.currentProject.set('lastAdaptedChapterID', cid);
-                                var chapter = window.Application.ChapterList.findWhere({chapterid: cid});
-                                if (chapter) {
-                                    window.Application.currentProject.set('lastAdaptedName', chapter.get('name'));
-                                } else {
-                                    // can't get the chapter -- just clear out the lastAdaptedName value
-                                    window.Application.currentProject.set('lastAdaptedName', "");
-                                }
-                                window.Application.currentProject.save();
+                                var bookmarkid = window.Application.generateUUID();
+                                var newBookmark = new userModels.Bookmark({
+                                    bookmarkid: bookmarkid,
+                                    projectid: bk.get('projectid'),
+                                    name: bk.get("name"), // BUGBUG - should be chaptername within book?
+                                    bookid: bk.get("bookid"),
+                                    chapterid: cid
+                                });
+                                // save and add to the collection
+                                newBookmark.save();
+                                window.Application.bookmarkList.add(newBookmark);
+                                // this is the current project -- set this bookmark as the current bookmark
+                                window.Application.currentBookmark = newBookmark;
                             }
+                            window.Application.currentProject.save();
                         }
                     }
                 }
@@ -6270,6 +6331,7 @@ define(function (require) {
             // - If the user has changed the book name, update the name value in the book and each chapter
             // - Close out the import and move to the home page
             onOK: function () {
+                console.log("onOK - entry");
                 if (bookName.length === 0) {
                     // prevent re-entry -- just go to the home page
                     window.location.replace("");
@@ -6280,6 +6342,7 @@ define(function (require) {
                     if ($("#BookName").length > 0 && $("#BookName").val() !== bookName) {
                         // name change -- update all the things
                         var newName = $("#BookName").val().trim();
+                        console.log("onOK() - new book name: " + newName);
                         var book = window.Application.BookList.where({projectid: this.model.get('projectid'), name: bookName})[0];
                         var i = 0;
                         var chapterName = "";
@@ -6300,29 +6363,16 @@ define(function (require) {
                             chap.save({name: newChapterName});
                             if (firstChapWithVerses === null && chap.get('versecount') !== 0) {
                                 firstChapWithVerses = chap;
-                                // it's possible we also need to change the lastAdaptedName for this chapter book
-                                if (this.model.get("lastAdaptedName").indexOf(bookName) > -1) {
+                                // it's possible we also need to change the name in our bookmark
+                                if (window.Application.currentBookmark.get("name").indexOf(bookName) > -1) {
                                     // we have chapters -- use the first one that has some verses
-                                    this.model.set('lastAdaptedName', chap.get('name'));
+                                    window.Application.currentBookmark.set('name', chap.get('name'));
                                 }
                             }
                         }
-                        // last document and chapter (if the first import)
-                        // note that these might have already been set in the readXXXDoc() methods above
-                        if (this.model.get('lastDocument') === bookName) {
-                            this.model.set('lastDocument', newName);
-                        }
-                        // test for lastAdaptedName === bookName (first import for a plain text file)  
-                        if (this.model.get("lastAdaptedName") === bookName) {
-                            // no chapter -- set to newName
-                            this.model.set('lastAdaptedName', newName);
-                        }
-                        if (this.model.get('lastAdaptedBookID') === 0) {
-                            this.model.set('lastAdaptedBookID', book.get("bookid"));
-                        }
-                        if (this.model.get('lastAdaptedChapterID') === 0) {
-                            this.model.set('lastAdaptedChapterID', firstChapWithVerses.get('chapterid'));                        
-                        }
+                        // name in the current bookmark
+                        window.Application.currentBookmark.set("name", chapterList[0].get('name'), {silent: true});
+                        window.Application.currentBookmark.update();
                     }
                     // save the model
                     this.model.save();

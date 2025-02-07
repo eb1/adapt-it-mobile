@@ -8,7 +8,7 @@ define(function (require) {
         Backbone    = require('backbone'),
         i18n        = require('i18n'),
         projects    = [],
-        CURRSCHEMA  = 4,
+        CURRSCHEMA  = 5,
         
         // ---
         // STATIC METHODS
@@ -344,6 +344,39 @@ define(function (require) {
                     deferred.resolve();
                 });
             }
+            if (fromVersion === 4) {
+                // AIM version 1.18 (user, bookmark tables)
+                window.Application.db.transaction(function (tx) {
+                    var theSQL = "";
+                    // version table exists (see logic above), but is at version 4; update it here
+                    tx.executeSql('UPDATE version SET schemaver=? WHERE id=?;', [CURRSCHEMA, 1], function (tx, res) {
+                        console.log("version table updated -- schema version: " + CURRSCHEMA);
+                    }, function (err) {
+                        console.log("failed to set the version schema: " + err);
+                    });
+                    // update changes for 1.18
+                    // 2 new tables -- user and bookmark
+                    theSQL = 'CREATE TABLE IF NOT EXISTS user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - user table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+                    theSQL = 'CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, name text, bookid text, chapterid text, spid text);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - bookmark table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+
+                }, function (e) {
+                    console.log("upgradeSchema error: " + e.message);
+                }, function () {
+                    deferred.resolve();
+                });
+            }
             return deferred.promise();            
         },
         // checkSchema
@@ -354,12 +387,14 @@ define(function (require) {
         checkSchema = function () {
             var deferred = $.Deferred();
             var theSQL = "";
-            console.log("checkSchema: entry");
-            if (typeof device === "undefined") {
-                return;
+            console.log("checkSchema: entry, device:" + device);
+            if (device === null || typeof device === "undefined") {
+                deferred.reject("checkSchema(): reject - undefined device.");
+                return deferred.promise();            
             }
             if (!window.Application.db) {
-                deferred.reject("checkSchema(): Database not found.");
+                deferred.reject("checkSchema(): reject - Database not found.");
+                return deferred.promise();            
             }
             window.Application.db.transaction(function (tx) {
                 // Check 1: is there a version table? 
@@ -369,6 +404,7 @@ define(function (require) {
                 } else {
                     theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'version\';";
                 }
+                console.log("SQL: " + theSQL);
                 tx.executeSql(theSQL, [], function (tx, res) {
                     if (res.rows.length > 0) {
                         console.log("checkSchema: version table exists");
@@ -646,11 +682,13 @@ define(function (require) {
                 TargetDir: "",
                 NavDir: "",
                 name: "",
+                // EDB 9 Jan 2025 (v1.18) - these have moved to the bookmarks table
                 lastDocument: "",
                 lastAdaptedBookID: 0,
                 lastAdaptedChapterID: 0,
                 lastAdaptedSPID: "",
                 lastAdaptedName: "",
+                // end EDB
                 CustomFilters: "false",
                 FilterMarkers: "\\lit \\_table_grid \\_header \\_intro_base \\x \\r \\cp \\_horiz_rule \\ie \\rem \\_unknown_para_style \\_normal_table \\note \\_heading_base \\_hidden_note \\_footnote_caller \\_dft_para_font \\va \\_small_para_break \\_footer \\_vernacular_base \\pro \\xt \\_notes_base \\__normal \\xdc \\ide \\mr \\xq \\_annotation_ref \\_annotation_text \\_peripherals_base \\_gls_lang_interlinear \\free \\rq \\_nav_lang_interlinear \\_body_text \\cl \\xot \\efm \\bt \\_unknown_char_style \\_double_boxed_para \\_hdr_ftr_interlinear \\xk \\_list_base \\ib \\xnt \\fig \\restore \\_src_lang_interlinear \\vp \\_tgt_lang_interlinear \\ef \\ca \\xo \\_single_boxed_para \\sts"
             },
@@ -950,7 +988,6 @@ define(function (require) {
                     break;
                 }
             }
-
         }),
 
         ProjectCollection = Backbone.Collection.extend({

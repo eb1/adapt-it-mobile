@@ -21,6 +21,7 @@ define(function (require) {
         chapterModel    = require('app/models/chapter'),
         spModel         = require('app/models/sourcephrase'),
         kbmodel         = require('app/models/targetunit'),
+        userModel       = require('app/models/user'),
         clickCount      = 0,
         strPassword     = "dangerous",
         books           = null,
@@ -28,6 +29,8 @@ define(function (require) {
         sourcephrases   = null,
         targetunits     = null,
         projects        = null,
+        users           = null,
+        bookmarks       = null,
         
         // Helper method to completely reset AIM. Called when the user clicks on the
         // title ("Adapt It Mobile") 5 TIMES on the Home View without clicking elsewhere,
@@ -38,6 +41,9 @@ define(function (require) {
             chapters = new chapterModel.ChapterCollection();
             sourcephrases = new spModel.SourcePhraseCollection();
             targetunits = new kbmodel.TargetUnitCollection();
+            books = new bookModel.BookCollection();
+            bookmarks = new userModel.BookmarkCollection();
+            users = new userModel.UserCollection();
             // clear all documents
             sourcephrases.clearAll();
             chapters.clearAll();
@@ -47,6 +53,9 @@ define(function (require) {
             // clear all project data
             localStorage.removeItem("CurrentProjectID");
             window.Application.currentProject = null;
+            window.Application.currentBookmark = null;
+            bookmarks.clearAll();
+            users.clearAll();
             projects.clearAll();
             // refresh the view
             window.Application.ProjectList.fetch({reset: true, data: {name: ""}});
@@ -139,11 +148,53 @@ define(function (require) {
         // project (window.Application.currentProject, initialized in application.js).
         HomeView = Marionette.ItemView.extend({
             template: Handlebars.compile(tplHome),
-            
+
             onShow: function () {
-                books = window.Application.BookList;
-                books.fetch({reset: true, data: {name: ""}});
+                console.log("HomeView::onShow() entry");
+                // only check KB if we have a current project defined
+                if (window.Application.currentProject) {
+                    if (window.Application.kbList.length === 0) {
+                        window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}});
+                    }
+                    if (window.Application.BookList.length === 0) {
+                        window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
+                    }
+                    window.Application.setBookmarks().done(this.updateActions);
+                }
+
                 clickCount = 0;
+            },
+
+            updateActions: function () {
+                console.log("updateActions() - entry");
+                // There is a current project; we've also pre-loaded the KB, books, chapters, and bookmarks for the project
+                // before loading this page (in Application.home()).
+                var projectid = window.Application.currentProject.get("projectid");
+                books = window.Application.BookList;
+                console.log("book count for current project: " + books.length);
+                if (books.length > 0) {
+                    // There is at least 1 book imported into the project. 
+                    // Show the search and adapt links, and optionally the export link (if there's something in the KB)
+                    var tuCount = window.Application.kbList.length;
+                    var projectid = window.Application.currentProject.get('projectid');
+                    var str = "";
+                    if (tuCount > 0) {
+                        // at least some translation done -- show the export link
+                        str += '<li class="topcoat-list__item"><a class="big-link" id="export" title="' + i18n.t("view.lblExport") + '" href="#export/' + projectid + '"><span class="btn-export"></span><span id="lblExport">' + i18n.t('view.lblExport') + '</span><span class="chevron"></span></a></li>';
+                    }
+                    // show the search and adapt links 
+                    str += '<li class="topcoat-list__item"><a class="big-link" id="search" title="' + i18n.t('view.dscSearch') + '" href="#search/' + projectid + '"><span class="btn-book"></span>' + i18n.t('view.lblSearch') + '<span class="chevron"></span></a></li>';
+                    // build the adapt link from the current bookmark, if there is one
+                    if (window.Application.currentBookmark) {
+                        console.log("onShow() - current bookmark set");
+                        str += '<li class="topcoat-list__item"><a class="big-link" id="adapt" title="' + i18n.t('view.dscAdapt') + '"';
+                        str += ' href="#adapt/' + window.Application.currentBookmark.get("chapterid") + '"><span class="btn-adapt"></span><span id="lblAdapt">';
+                        str += (window.Application.currentBookmark.get("name").length > 0) ? window.Application.currentBookmark.get("name") : i18n.t('view.lblAdapt');
+                        str += '</span><span class="chevron"></span></a></li>';
+                    }
+                    // done building our action links -- append them to the html list
+                    $("#ProjectItems").append(str);
+                }
             },
 
             ////

@@ -7,19 +7,34 @@ define(function (require) {
 
     var Backbone = require('backbone'),
 
-        TargetUnit = Backbone.Model.extend({
+    TargetUnit = Backbone.Model.extend({
+        // default values
+        defaults: {
+            tuid: "",
+            projectid: "",
+            source: "",
+            mn: 1,
+            f: "0",
+            refstring: [],
+            timestamp: "",
+            user: "",
+            isGloss: 1
+        },
 
-            urlRoot: "/targetunit"
+    }),
 
-        }),
+    TargetUnitCollection = Backbone.Collection.extend({
+        model: TargetUnit,
+        url: function() {
+            // TODO: global function to prepend server:port to url path
+            // return this.document.url() + '/targetunits';
+            return "http://localhost:3042/targetunits";
+        },
 
-        TargetUnitCollection = Backbone.Collection.extend({
-
-            model: TargetUnit,
-
-            url: "/targetunits"
-
-        });
+        parse: function (data) {
+            return data.targetunits;
+        }
+    });
 
     return {
         TargetUnit: TargetUnit,

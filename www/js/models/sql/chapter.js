@@ -196,7 +196,12 @@ define(function (require) {
                                     }
                                     // return the filtered results (now that we have them)
                                     retValue = chapters.filter(function (element) {
-                                        return element.attributes.name.toLowerCase().indexOf(name.toLowerCase()) > -1;
+                                        if (name.length > 0) {
+                                            return element.attributes.name.toLowerCase().indexOf(name.toLowerCase()) > -1;
+                                        } else {
+                                            // cleared out the old collection -- now fetch everything
+                                            return true;
+                                        }
                                     });
                                     options.success(retValue);
                                     deferred.resolve(retValue);
@@ -212,6 +217,8 @@ define(function (require) {
                         }
                         // return the promise
                         return deferred.promise();
+                    } else {
+                        return Backbone.sync.apply(this, arguments);
                     }
                 }
             }

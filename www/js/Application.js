@@ -19,6 +19,7 @@ define(function (require) {
         bookModel       = require('app/models/book'),
         spModel         = require('app/models/sourcephrase'),
         kbModels        = require('app/models/targetunit'),
+        userModels      = require('app/models/user'),
         AppRouter       = require('app/router'),
         PageSlider      = require('app/utils/pageslider'),
         slider          = new PageSlider($('body')),
@@ -37,8 +38,8 @@ define(function (require) {
         models          = [],
         DB_NAME         = "AIM",
         db_dir          = "",
+        LOCAL_USER      = "LocalUser",  // user for local AIM db
         locale          = "en-AU",  // default
-
 
         // Utility function from https://gist.github.com/nikdo/1b62c355dae50df6410109406689cd6e
         // https://stackoverflow.com/a/35940276/5763764
@@ -77,6 +78,8 @@ define(function (require) {
             searchList: null,
             searchIndex: 0,
             currentProject: null,
+            currentBookmark: null,
+            user: null,
             localURLs: [],
             version: "1.17.3", // appended with Android / iOS build info
             AndroidBuild: "62", // (was milestone release #)
@@ -207,20 +210,22 @@ define(function (require) {
                         };                        
                     } else if (device.platform === "iOS") {
                         // iOS -- Documents dir: db is visible to iTunes, backed up by iCloud
-                        this.db = window.sqlitePlugin.openDatabase({name: DB_NAME, iosDatabaseLocation: 'Documents'});
-                        this.onInitDB();
-
+                        // Attempt to create / open our AIM database now
+                        this.db = window.sqlitePlugin.openDatabase({name: DB_NAME, iosDatabaseLocation: 'Documents'}, function(db) {
+                            console.log("ios db open ok, checking schema");
+                            window.Application.checkDBSchema().then(window.Application.onInitDB());
+                        });
                     } else if (device.platform === "Android") {
                         // Android -- scoped storage wonkiness introduced in stages starting with API 30
                         // first check the data directory, then check the "default" location
                         db_dir = cordova.file.dataDirectory;
                         console.log("db_dir: " + db_dir);
-                        // // now attempt to get the directory
+                        // now attempt to get the directory
                         window.resolveLocalFileSystemURL(db_dir, function (directoryEntry) {
                             console.log("Got directoryEntry. Attempting to create / open AIM DB at: " + directoryEntry.nativeURL);
                             // Attempt to create / open our AIM database now
                             window.Application.db = window.sqlitePlugin.openDatabase({name: DB_NAME, androidDatabaseLocation: directoryEntry.nativeURL}, function(db) {
-                                window.Application.checkDBSchema().then(window.Application.onInitDB()); // Android only (iOS calls directly)
+                                window.Application.checkDBSchema().then(window.Application.onInitDB());
                             }, function (err) {
                                 console.log("Open database ERROR: " + JSON.stringify(err));
                             });
@@ -250,31 +255,64 @@ define(function (require) {
             // Callback to finish initialization once the AIM database has successfully been created / opened.
             // This code was moved from initialize() above, and is called from there once the DB is okay to use.
             onInitDB: function () {
-                // callback function to initialize / load the localization info
+                // Method initialize localization for the app. Calls init_collections_and_go once complete.
                 var initialize_i18n = function (locale) {
                     i18n.init({
                         lng: locale,
                         debug: true,
                         fallbackLng: 'en'
                     }, function () {
-                        // Callback when i18next is finished initializing
                         var IMPORTED_KB_FILE = "**ImportedKBFile**";
-
+                        // Localization done -- 
                         // Create the app-wide collections
                         window.Application.ProjectList = new projModel.ProjectCollection();
                         window.Application.BookList = new bookModel.BookCollection();
                         window.Application.ChapterList = new chapterModel.ChapterCollection();
                         window.Application.kbList = new kbModels.TargetUnitCollection();
                         window.Application.spList = new spModel.SourcePhraseCollection();
-                        // Note on these collections:
+                        window.Application.bookmarkList = new userModels.BookmarkCollection();
+                        // (Note on these collections:
                         // The ProjectList is populated at startup in home() below; if there is a current project,
                         // the books, chapters, and KB are loaded for the current project in home() as well.   
                         // The sourcephrases are not held as an app-wide collection (for a NT, this could result in ~300MB of memory) --
                         // Instead, they are instantiated on the pages that need them
-                        // (DocumentViews for doc import/export and AdaptViews for adapting)
+                        // (DocumentViews for doc import/export and AdaptViews for adapting))
 
-                        // Tell backbone we're ready to start loading the View classes.
-                        Backbone.history.start();
+                        // check the local db for our LocalUser; create if needed
+                        var userList = new userModels.UserCollection();
+                        $.when(userList.fetch({reset: true, data: {username: ""}})).done(function () {
+                            console.log("userList length: " + userList.length);
+                            var localUser = userList.findWhere({username: LOCAL_USER});
+                            if (localUser === undefined) {
+                                console.log("init_collections_and_go() - No local user, creating");
+                                var userid = window.Application.generateUUID();
+                                localUser = new userModels.User({
+                                    username: LOCAL_USER,
+                                    userid: userid,
+                                    roles: [],
+                                    bookmarks: [],
+                                    copysource: 0,
+                                    wrapusfm: 0,
+                                    stopatboundaries: 0,
+                                    alloweditblanksp: 0,
+                                    showtranslationchecks: 0,
+                                    defaultfttarget: 0,
+                                    uilang: 0,
+                                    darkmode: 1,
+                                    wordspacing: 2
+                                });
+                                // save the user to the DB
+                                localUser.save();
+                                window.Application.user = localUser;            
+                            } else {
+                                // there's a local user set in the DB - use it
+                                console.log("init_collections_and_go() - found local user, setting");
+                                window.Application.user = localUser;
+                            }
+                            // Startup initialization is complete
+                            // Tell backbone we're ready to start loading the View classes.
+                            Backbone.history.start();
+                        });                        
                     });
                 };
                 // create model collections off the Application object
@@ -283,6 +321,8 @@ define(function (require) {
                 this.ChapterList = null;
                 this.spList = null;
                 this.kbList = null;
+                this.bookmarkList = null;
+                this.user = null;
                 
                 // did the user specify a custom language?
                 if (localStorage.getItem("UILang")) {
@@ -313,7 +353,7 @@ define(function (require) {
                     window.history.back();
                 });
             },
-            
+
             onStart: function (app, options) {
                 // check the database schema now that we've created / opened it
                 // this.checkDBSchema();
@@ -321,7 +361,85 @@ define(function (require) {
             
             checkDBSchema: function () {
                 // verify we're on the latest DB schema (upgrade if necessary)
+                console.log("checkDBSchema: entry");
                 return projModel.checkSchema();
+            },
+
+            // Helper method to populate Application.bookmarkList:
+            // - If we're upgrading from a previous release, the LastAdapted<x> properties in the project collection
+            //   get copied over to new bookmark objects in our DB, as well as to a "bookmarks" array property for 
+            //   window.Application.user
+            // This method is called from HomeViews:OnShow() before rendering the search/adapt links
+            setBookmarks: function () {
+                var deferred = $.Deferred();
+                // Each AIM instance has a local user associated with the project(s) in the local DB
+                console.log("setBookmarks() - entry");
+                // sanity check -- make sure window.Application.user is set
+                if (window.Application.user === null) {
+                    console.log("setBookmarks() error -- no local user set, exiting");
+                    return;
+                }
+
+                // verify / update the bookmark list
+                if (window.Application.user.get("bookmarks").length === 0) {
+                    console.log("setBookmarks() - user has no bookmarks set; setting for each project (if there are any)");
+                    var bookmarks = window.Application.user.get("bookmarks"); // s/b empty array of bookmarkids, not collection
+                    if (window.Application.ProjectList.length > 0) {
+                        window.Application.ProjectList.each(function (model, index) {
+                            // If we're here, we're likely upgrading from a previous version of AIM, and the project _should_
+                            // have the info to populate this bookmark (leave blank if not)
+                            var bookmarkid = window.Application.generateUUID();
+                            var newBookmark = new userModels.Bookmark({
+                                bookmarkid: bookmarkid,
+                                projectid: model.get('projectid'),
+                                name: (model.get('lastAdaptedName').length > 0) ? model.get('lastAdaptedName') : "",
+                                bookid: (model.get('lastAdaptedBookID').length > 0) ? model.get('lastAdaptedBookID') : "",
+                                chapterid: (model.get('lastAdaptedChapterID').length > 0) ? model.get('lastAdaptedChapterID') : "",
+                                spid: (model.get('lastAdaptedSPID').length > 0) ? model.get('lastAdaptedSPID') : ""
+                            });
+                            // save and add to the collection
+                            newBookmark.save();
+                            if (model.get('projectid') === window.Application.currentProject.get('projectid')) {
+                                // this is the current project -- set this bookmark as the current bookmark
+                                console.log("setBookmarks() - also setting current bookmark: " + bookmarkid + " for projectid: " + model.get('projectid'));
+                                window.Application.currentBookmark = newBookmark;
+                            }
+                            window.Application.bookmarkList.add(newBookmark);
+                            // add this to the user's bookmarkid array
+                            bookmarks.push(bookmarkid);
+                        });
+                        // done looping through the project list -- update the user's bookmarks
+                        window.Application.user.set("bookmarks", bookmarks, {silent: true});
+                        window.Application.user.update();
+                        // done populating user/bookmarks
+                        deferred.resolve();
+                    } else {
+                        console.log("No bookmarks added (no projects in list)");
+                        deferred.resolve();
+                    }
+                } else {
+                    console.log("setBookmarks() - user has bookmarks defined");
+                    // there should be a bookmarkid in the user's bookmark array that points to the current project -
+                    // set our current bookmark to that one
+                    window.Application.bookmarkList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}).then(function () {
+                        console.log("setBookmarks() - bookmark list retrieved, length: " + window.Application.bookmarkList.length);
+                        window.Application.ProjectList.each(function (model, index) {
+                            if (window.Application.user.get("bookmarks").indexOf(model.get("bookmarkid")) > -1) {
+                                // this bookmark is in the user's list -- set it as the current bookmark
+                                console.log("setBookmarks() - found matching bookmark, setting");
+                                window.Application.currentBookmark = model;
+                                deferred.resolve();
+                                return;
+                            }
+                        });
+                        // if we got here, we didn't find a valid bookmark. TDB - error?
+                        console.log("setBookmarks() - didn't find a matching bookmark, setting to the first in the list");
+                        window.Application.currentBookmark = window.Application.bookmarkList.at(0);
+                        deferred.resolve();    
+                    });
+                }
+
+                return deferred.promise();
             },
 
             // -----------
@@ -335,22 +453,29 @@ define(function (require) {
                 // new project wizard. These objects with no id defined are only in memory;
                 // once the source and target language are defined, an id is set and
                 // the project is saved in the device's localStorage.
-                $.when(this.ProjectList.fetch({reset: true, data: {name: ""}})).done(function () {
+                // $.when(this.ProjectList.fetch()).done(function () {
+                this.ProjectList.fetch({reset: true, data: {name: ""}}).then(function () {
                     window.Application.ProjectList.each(function (model, index) {
                         if (model.get('projectid') === "") {
                             // empty project -- mark for removal
                             models.push(model);
                         }
                     });
+
                     // remove the half-completed project objects
                     if (models.length > 0) {
                         window.Application.ProjectList.remove(models);
                     }
-                    if (window.Application.currentProject === null) {
+                    if (!window.Application.currentProject) {
+                        console.log("Home() - No current project set");
                         // check to see if we saved a current project
                         if (localStorage.getItem("CurrentProjectID")) {
+                            console.log("Attempting to use CurrentProjectID from local storage");
                             window.Application.currentProject = window.Application.ProjectList.where({projectid: localStorage.getItem("CurrentProjectID")})[0];
-                        } else {
+                        }
+                        if (!window.Application.currentProject) {
+                            // project list was a dud. Set to the first item in the list if we can
+                            console.log("No localStorage, or attempt to set failed. Trying the first item in the project list (if there is one)");
                             // pick the first project in the list, if there is one
                             if (window.Application.ProjectList.length > 0) {
                                 window.Application.currentProject = window.Application.ProjectList.at(0);
@@ -358,13 +483,6 @@ define(function (require) {
                                 localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));
                             }
                         }                        
-                    }
-                    // Is there a current project?
-                    if ((window.Application.currentProject !== undefined) && (window.Application.currentProject !== null)) {
-                        // there's a "real" current project -- load the books, chapter, and KB
-                        window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
-                        window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
-                        window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
                     }
                     // Did another task launch us (i.e., did our handleOpenURL() from main.js
                     // get called)? If so, pull out the URL and process the resulting file
@@ -377,7 +495,7 @@ define(function (require) {
                             window.FilePath.resolveNativePath(shareURL, function(absolutePath) {
                                 window.Application.importingURL = absolutePath;
                                 window.resolveLocalFileSystemURL(shareURL, window.Application.processFileEntry, window.Application.processError);
-                              });
+                            });
                         } else {
                             // not a content://path url -- resolve and process file
                             window.Application.importingURL = "";
@@ -385,6 +503,7 @@ define(function (require) {
                         }
                     } else {
                         // No pending import requests -- display the home view
+                        console.log("creating home view");
                         homeView = new HomeViews.HomeView({model: window.Application.currentProject});
                         homeView.delegateEvents();
                         window.Application.main.show(homeView);
@@ -468,7 +587,7 @@ define(function (require) {
                 console.log("showTranslations");
                 // update the KB and source phrase list, then display the Translations screen with the currently-selected sourcephrase
                 $.when(window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}})).done(function () {
-                    $.when(window.Application.spList.fetch({reset: true, data: {spid: window.Application.currentProject.get('lastAdaptedSPID')}})).done(function () {
+                    $.when(window.Application.spList.fetch({reset: true, data: {spid: id}})).done(function () {
                         var sp = window.Application.spList.where({spid: id});
                         if (sp === null || sp.length === 0) {
                             console.log("sp Entry not found:" + id);
@@ -556,20 +675,16 @@ define(function (require) {
                     window.Application.main.show(exportDocView);
                 }
             },
-            // Search / browse chapter view
+            // Search / browse chapter view -- all books/chapters in current project
             lookupChapter: function (id) {
                 console.log("lookupChapter");
-                $.when(window.Application.ProjectList.fetch({reset: true, data: {name: ""}})).done(function () {
-                    $.when(window.Application.ChapterList.fetch({reset: true, data: {name: ""}})).done(function () {
-                        var proj = window.Application.ProjectList.where({projectid: id});
-                        if (proj !== null) {
-                            lookupView = new SearchViews.LookupView({model: proj[0]});
-                            window.Application.main.show(lookupView);
-                        } else {
-                            console.log("no project defined");
-                        }
-                    });
-                });
+                var proj = window.Application.ProjectList.where({projectid: id});
+                if (proj !== null) {
+                    lookupView = new SearchViews.LookupView({model: proj[0]});
+                    window.Application.main.show(lookupView);
+                } else {
+                    console.log("no project defined");
+                }
             },
             // Adapt View (the reason we're here)
             adaptChapter: function (id) {
@@ -596,13 +711,28 @@ define(function (require) {
                                     book.set('name', bookName);
                                     book.save();
                                 }
-                                proj.set('lastDocument', book.get('name'));
-                                proj.set('lastAdaptedBookID', chapter.get('bookid'));
-                                proj.set('lastAdaptedChapterID', chapter.get('chapterid'));
-                                proj.set('lastAdaptedName', chapter.get('name'));
-                                proj.save();
-                                window.Application.currentProject = proj;
-                                localStorage.setItem("CurrentProjectID", proj.get("projectid"));
+                                // do we have a current bookmark?
+                                if (window.Application.currentBookmark === null) {
+                                    // no -- create one
+                                    var bookmarkid = window.Application.generateUUID();
+                                    var newBookmark = new userModels.Bookmark({
+                                        bookmarkid: bookmarkid,
+                                        projectid: proj.get('projectid'),
+                                        name: chapter.get("name"),
+                                        bookid: book.get("bookid"),
+                                        chapterid: chapter.get('chapterid')
+                                    });
+                                    // save and add to the collection
+                                    newBookmark.save();
+                                    window.Application.bookmarkList.add(newBookmark);
+                                    // this is the current project -- set this bookmark as the current bookmark
+                                    window.Application.currentBookmark = newBookmark;
+                                } else {
+                                    // we have a current bookmark -- update it
+                                    window.Application.currentBookmark.set('name', chapter.get('name'));
+                                    window.Application.currentBookmark.set('bookid', book.get('bookid'));
+                                    window.Application.currentBookmark.set('chapterid', chapter.get('chapterid'));
+                                }
                             }
                             window.Application.main.show(theView);
                         } else {

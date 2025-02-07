@@ -7,19 +7,27 @@ define(function (require) {
 
     var Backbone = require('backbone'),
 
-        Chapter = Backbone.Model.extend({
+    Chapter = Backbone.Model.extend({
+        // default values
+        defaults: {
+            chapterid: "",
+            bookid: "",
+            projectid: "",
+            name: "",
+            lastadapted: 0,
+            versecount: 0
+        },
 
-            urlRoot: "/chapter"
+    }),
 
-        }),
-
-        ChapterCollection = Backbone.Collection.extend({
-
-            model: Chapter,
-
-            url: "/chapters"
-
-        });
+    ChapterCollection = Backbone.Collection.extend({
+        model: Chapter,
+        url: function() {
+            // TODO: global function to prepend server:port to url path
+            // return this.document.url() + '/chapters';
+            return "http://localhost:3042/chapters";
+        }
+    });
 
     return {
         Chapter: Chapter,

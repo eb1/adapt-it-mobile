@@ -8,8 +8,8 @@ require.config({
     // backbone.babysitter 0.1.12
     // backbone.wreqr   1.4.0
     // circular-progress-bar 1.0.6
-    // featherlight     1.7.6
-    // featherlight.gallery 1.7.6
+    // featherlight     1.7.14
+    // featherlight.gallery 1.7.14
     // hammer           2.0.8
     // handlebars       4.7.8
     // hopscotch        0.3.1+  ** NOTE: if upgrading, fold in the hack in hopscotch.js (search for EDB HACK) -
@@ -50,6 +50,7 @@ require.config({
     map: {
         '*': {
             'app/models': 'app/models/sql' // Use sqlite model persistence
+            // 'app/models': 'app/models/json' // Use json model persistence
         }
     },
     shim: {
