@@ -7,7 +7,8 @@
 
 _Android .apk for side-loading can be found in the [Assets section for each release](https://github.com/adapt-it/adapt-it-mobile/releases)_
 
-[![CI Debug Build Status](https://github.com/adapt-it/adapt-it-mobile/.github/workflows/main.yml/badge.svg)](https://github.com/adapt-it/adapt-it-mobile/actions)
+
+[![CI Debug Build Status](https://github.com/adapt-it/adapt-it-mobile/actions/workflows/main.yml/badge.svg)](https://github.com/adapt-it/adapt-it-mobile/actions)
 
 User site: [https://adapt-it.github.io/adapt-it-mobile/](https://adapt-it.github.io/adapt-it-mobile/)
 
