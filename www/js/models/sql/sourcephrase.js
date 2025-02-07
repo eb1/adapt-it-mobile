@@ -31,7 +31,7 @@ define(function (require) {
             defaults: {
                 spid: "",
                 chapterid: "",
-                vid: "", // 1.6 (verse ID for multiple imports)
+                vid: "", // 1.6 (verse ID for multiple imports) - can refer to range of verses (e.g., \v 1-6)
                 norder: 0,
                 markers: "",
                 orig: null,

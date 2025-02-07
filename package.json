@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "cordova-lib": "^10.1.0",
-    "cordova-plugin-fonts": "^0.6.5",
+    "cordova-plugin-fonts": "^1.0.0",
     "cordova-plugin-save-dialog": "2.0.1",
     "cordova-plugin-statusbar": "^2.4.3",
     "crypto-randomuuid": "^1.0.0",
