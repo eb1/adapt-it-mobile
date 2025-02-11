@@ -3201,8 +3201,13 @@ define(function (require) {
                         // space after the verse #
                         verseNum = model.get('markers').substr(stridx, model.get('markers').indexOf(ONE_SPACE, stridx) - stridx);
                     }
+                    if (verseNum.indexOf("-") > -1) {
+                        // looking at a range of verses -- take the substring up to the dash (i.e., the first verse in the range)
+                        verseNum = verseNum.substring(0, verseNum.indexOf("-"));
+                    }
                     console.log("Adapting verse: " + verseNum);
-                    chapter.set('lastadapted', verseNum);
+                    // convert to integer and save value
+                    chapter.set('lastadapted', parseInt(verseNum, 10));
                 }
                 // if this is a text document (i.e., no verses), set the last adapted count to non-zero
                 if (chapter.get('versecount') < 0) {
