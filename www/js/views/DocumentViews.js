@@ -3188,7 +3188,30 @@ define(function (require) {
                                         // verse -- need to get a new verse ID
                                         verseID = window.Application.generateUUID();
                                         var vCount = (markers.match(/\\v /g) || []).length;
-                                        verseCount = verseCount + vCount; // most of the time, this will just increment by 1
+                                        var realCount = vCount;
+                                        var vIdx = 0;
+                                        var aRange = [];
+                                        // Each \v marker can be followed by a _range_ of verses (e.g. "\v 1-3") or a single verse.
+                                        // Figure out how much we should increment the verseCount by
+                                        for (var idx=0; idx<vCount; idx++) {
+                                            vIdx = markers.indexOf("\\v ", vIdx) + 3;
+                                            if (markers.lastIndexOf(" ") < vIdx) {
+                                                // no space after the chapter # (it's the ending of the string)
+                                                verseNum = markers.substr(vIdx);
+                                            } else {
+                                                // space after the chapter #
+                                                verseNum = markers.substr(vIdx, markers.indexOf(" ", vIdx) - vIdx);
+                                            }
+                                            if (verseNum.indexOf("-") > -1) { 
+                                                // this is a range - count the # of verses
+                                                aRange = verseNum.split("-");
+                                                realCount += (parseInt(aRange[1],10) - parseInt(aRange[0],10));
+                                            }                                
+                                        }
+                                        if (realCount !== vCount) {
+                                            console.log("Found at least 1 range of verses. vCount=" + vCount + ", computed realCount=" + realCount);
+                                        }
+                                        verseCount = verseCount + realCount;
                                         // ** MERGE case: verse combined with an end marker
                                         if (spsExisting.length > 0) {
                                             // we have some existing sourcephrases for this chapter -- see if this verse needs merging
@@ -3620,7 +3643,30 @@ define(function (require) {
                                     }
                                     // EDB 30 Aug 2021: add blank verses (middle of content)
                                     var vCount = (markers.match(/\\v /g) || []).length;
-                                    verseCount = verseCount + vCount; // most of the time, this will just increment by 1
+                                    var realCount = vCount;
+                                    var vIdx = 0;
+                                    var aRange = [];
+                                    // Each \v marker can be followed by a _range_ of verses (e.g. "\v 1-3") or a single verse.
+                                    // Figure out how much we should increment the verseCount by
+                                    for (var idx=0; idx<vCount; idx++) {
+                                        vIdx = markers.indexOf("\\v ", vIdx) + 3;
+                                        if (markers.lastIndexOf(" ") < vIdx) {
+                                            // no space after the chapter # (it's the ending of the string)
+                                            verseNum = markers.substr(vIdx);
+                                        } else {
+                                            // space after the chapter #
+                                            verseNum = markers.substr(vIdx, markers.indexOf(" ", vIdx) - vIdx);
+                                        }
+                                        if (verseNum.indexOf("-") > -1) { 
+                                            // this is a range - count the # of verses
+                                            aRange = verseNum.split("-");
+                                            realCount += (parseInt(aRange[1],10) - parseInt(aRange[0],10));
+                                        }                                
+                                    }
+                                    if (realCount !== vCount) {
+                                        console.log("Found at least 1 range of verses (middle of content). vCount=" + vCount + ", computed realCount=" + realCount);
+                                    }
+                                    verseCount = verseCount + realCount;
                                     if (vCount > 1) {
                                         // special case -- blank verses
                                         console.log("Blank verses found: " + vCount);
@@ -3747,7 +3793,30 @@ define(function (require) {
                         // done with the content array. Did we end on empty verses?
                         if (markers && markers.indexOf("\\v ") !== -1) {
                             var vCount = (markers.match(/\\v /g) || []).length;
-                            verseCount = verseCount + vCount; // most of the time, this will just increment by 1
+                            var realCount = vCount;
+                            var vIdx = 0;
+                            var aRange = [];
+                            // Each \v marker can be followed by a _range_ of verses (e.g. "\v 1-3") or a single verse.
+                            // Figure out how much we should increment the verseCount by
+                            for (var idx=0; idx<vCount; idx++) {
+                                vIdx = markers.indexOf("\\v ", vIdx) + 3;
+                                if (markers.lastIndexOf(" ") < vIdx) {
+                                    // no space after the chapter # (it's the ending of the string)
+                                    verseNum = markers.substr(vIdx);
+                                } else {
+                                    // space after the chapter #
+                                    verseNum = markers.substr(vIdx, markers.indexOf(" ", vIdx) - stvIdxridx);
+                                }
+                                if (verseNum.indexOf("-") > -1) { 
+                                    // this is a range - count the # of verses
+                                    aRange = verseNum.split("-");
+                                    realCount += (parseInt(aRange[1],10) - parseInt(aRange[0],10));
+                                }                                
+                            }
+                            if (realCount !== vCount) {
+                                console.log("Found at least 1 range of verses (blank verses at end). vCount=" + vCount + ", computed realCount=" + realCount);
+                            }
+                            verseCount = verseCount + realCount;
                             if (vCount >= 1) {
                                 // special case -- blank verses
                                 console.log("Empty verse(s) at end: " + vCount);

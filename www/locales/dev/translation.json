@@ -22,7 +22,7 @@
         "lblInstances": "Instances: __number__",
         "lblStatusFullyTranslated": "Fully translated",
         "lblStatusNotTranslated": "No translations (__versecount__ total verses).",
-        "lblStatusPartlyTranslated": "Partly drafted (__lastadapted__ of a total of __versecount__ verses have translation text).",
+        "lblStatusPartlyTranslated": "Partly drafted (adapting verse __lastadapted__ of __versecount__ verses).",
         "lblStatusNotTranslatedNoVerses": "No translations.",
         "lblStatusPartlyTranslatedNoVerses": "Partly drafted.",
         "lblChapterName": "__bookName__ __chapterNumber__",
