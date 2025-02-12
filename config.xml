@@ -371,7 +371,7 @@
         <splash src="www/res/screen/ios/Default@3x~universal~anyany.png" />
     </platform>
     <platform name="browser">
-        <plugin name="cordova-sqlite-storage" spec="^6.0.0" />
+        <plugin name="cordova-sqlite-storage" spec="^7.0.0" />
         <preference name="res/icon/electron/icon.png" />
         <preference name="SplashScreen" value="res/screen/ios/Default@2x~universal~anyany.png" />
         <preference name="AutoHideSplashScreen" value="true" />
@@ -382,7 +382,7 @@
         <preference name="SplashScreenHeight" value="300" />
     </platform>
     <platform name="electron">
-        <plugin name="cordova-sqlite-evcore-extbuild-free" spec="^0.15.1" />
+        <plugin name="cordova-sqlite-storage" spec="^7.0.0" />
         <preference name="www/res/icon/electron/icon.png" target="app" />
         <preference name="www/res/icon/electron/icon@2x.png" target="installer" />
         <preference name="ElectronSettingsFilePath" value="res/electron/settings.json" />
