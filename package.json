@@ -41,7 +41,7 @@
     "cordova-lib": "^10.1.0",
     "cordova-plugin-fonts": "^1.0.0",
     "cordova-plugin-save-dialog": "2.0.1",
-    "cordova-plugin-statusbar": "^2.4.3",
+    "cordova-plugin-statusbar": "^4.0.0",
     "crypto-randomuuid": "^1.0.0",
     "electron-builder": "^23.0.3",
     "gulp-uglify": "^3.0.2",
@@ -82,13 +82,13 @@
       },
       "cordova-plugin-keyboard": {},
       "cordova-clipboard": {},
-      "cordova-sqlite-evcore-extbuild-free": {},
       "cordova-plugin-chooser": {},
       "cordova-plugin-save-dialog": {},
       "cordova-plugin-filepath": {},
       "cordova-plugin-file": {
         "ANDROIDX_WEBKIT_VERSION": "1.4.0"
-      }
+      },
+      "cordova-sqlite-evcore-extbuild-free": {}
     },
     "platforms": [
       "android",
