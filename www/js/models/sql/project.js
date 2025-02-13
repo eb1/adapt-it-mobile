@@ -684,8 +684,8 @@ define(function (require) {
                 name: "",
                 // EDB 9 Jan 2025 (v1.18) - these have moved to the bookmarks table
                 lastDocument: "",
-                lastAdaptedBookID: 0,
-                lastAdaptedChapterID: 0,
+                lastAdaptedBookID: "",
+                lastAdaptedChapterID: "",
                 lastAdaptedSPID: "",
                 lastAdaptedName: "",
                 // end EDB
@@ -999,7 +999,7 @@ define(function (require) {
                     i = 0,
                     len = 0;
                 window.Application.db.transaction(function (tx) {
-                    tx.executeSql('CREATE TABLE IF NOT EXISTS project (id integer primary key, projectid text, SourceFont text, SourceFontSize text, SourceColor text, TargetFont text, TargetFontSize text, TargetColor text, NavigationFont text, NavigationFontSize text, NavigationColor text, SpecialTextColor text, RetranslationColor text, TextDifferencesColor text, SourceLanguageName text, SourceLanguageCode text, TargetLanguageName text, TargetLanguageCode text, SourceVariant text, TargetVariant text, CopyPunctuation text, PunctPairs text, AutoCapitalization text, SourceHasUpperCase text, CasePairs text, SourceDir text, TargetDir text, NavDir text, name text, lastDocument text, lastAdaptedBookID integer, lastAdaptedChapterID integer, lastAdaptedSPID text, lastAdaptedName text, CustomFilters text, FilterMarkers text);');
+                    tx.executeSql('CREATE TABLE IF NOT EXISTS project (id integer primary key, projectid text, SourceFont text, SourceFontSize text, SourceColor text, TargetFont text, TargetFontSize text, TargetColor text, NavigationFont text, NavigationFontSize text, NavigationColor text, SpecialTextColor text, RetranslationColor text, TextDifferencesColor text, SourceLanguageName text, SourceLanguageCode text, TargetLanguageName text, TargetLanguageCode text, SourceVariant text, TargetVariant text, CopyPunctuation text, PunctPairs text, AutoCapitalization text, SourceHasUpperCase text, CasePairs text, SourceDir text, TargetDir text, NavDir text, name text, lastDocument text, lastAdaptedBookID text, lastAdaptedChapterID text, lastAdaptedSPID text, lastAdaptedName text, CustomFilters text, FilterMarkers text);');
                     
                     tx.executeSql("SELECT * from project;", [], function (tx, res) {
                         var tmpString = "";

@@ -21,7 +21,6 @@
     <platform name="android">
         <hook src="scripts/before-build.js" type="before_build" />
         <plugin name="cordova-sqlite-evcore-extbuild-free" spec="^0.15.1" />
-        <plugin name="cordova-plugin-statusbar" spec="^2.4.3" />
         <preference name="android-minSdkVersion" value="26" />
         <preference name="android-targetSdkVersion" value="34" />
         <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/res/svg/ic_aim_adaptive_splash.xml" />
@@ -370,8 +369,13 @@
         <splash src="www/res/screen/ios/Default@2x~universal~anyany.png" />
         <splash src="www/res/screen/ios/Default@3x~universal~anyany.png" />
     </platform>
+    <!-- browser-based platforms:
+        * These use cordova-sqlite-storage instead of cordova-sqlite-evcore-extbuild-free
+        * They also use cordova-plugin-splashscreen, which is not supported on Android / iOS
+    -->
     <platform name="browser">
-        <plugin name="cordova-sqlite-storage" spec="^6.0.0" />
+        <plugin name="cordova-sqlite-storage" spec="^7.0.0" />
+        <plugin name="cordova-plugin-splashscreen" spec="^6.0.2" />
         <preference name="res/icon/electron/icon.png" />
         <preference name="SplashScreen" value="res/screen/ios/Default@2x~universal~anyany.png" />
         <preference name="AutoHideSplashScreen" value="true" />
@@ -382,7 +386,15 @@
         <preference name="SplashScreenHeight" value="300" />
     </platform>
     <platform name="electron">
-        <plugin name="cordova-sqlite-evcore-extbuild-free" spec="^0.15.1" />
+        <plugin name="cordova-sqlite-storage" spec="^7.0.0" />
+        <plugin name="cordova-plugin-splashscreen" spec="^6.0.2" />
+        <preference name="SplashScreen" value="res/screen/ios/Default@2x~universal~anyany.png" />
+        <preference name="AutoHideSplashScreen" value="true" />
+        <preference name="SplashScreenDelay" value="3000" />
+        <preference name="SplashScreenBackgroundColor" value="#2595cb" />
+        <preference name="ShowSplashScreen" value="false" />
+        <preference name="SplashScreenWidth" value="600" />
+        <preference name="SplashScreenHeight" value="300" />
         <preference name="www/res/icon/electron/icon.png" target="app" />
         <preference name="www/res/icon/electron/icon@2x.png" target="installer" />
         <preference name="ElectronSettingsFilePath" value="res/electron/settings.json" />
