@@ -5,7 +5,7 @@ require.config({
     
     // 3rd party lib versions:
     // backbone         1.6.0
-    // backbone.babysitter 0.1.12
+    // backbone.babysitter 1.0.0
     // backbone.wreqr   1.4.0
     // circular-progress-bar 1.0.6
     // featherlight     1.7.14
@@ -17,7 +17,7 @@ require.config({
     // i18next          1.9.0
     // jquery           3.6.0
     // langtags         1.3.1   ** refactored and minimized (see before-build.js)
-    // marionette       2.4.2
+    // marionette       2.4.7
     // require          2.3.7
     // spectrum         1.8.1
     // text             2.0.15
@@ -36,11 +36,12 @@ require.config({
         'hammerjs': 'hammer',
         'handlebars': 'handlebars.min-v4.7.8',
         'jquery-hammerjs': 'jquery.hammer',
+        'babysitter': 'babysitter.min',
         typeahead: 'typeahead.bundle',
         'i18n': 'i18next.amd.withJQuery.min', //'jquery-i18next.min',//
         'jquery': 'jquery-3.6.0.min',
         'langtags': 'langtags.min',
-        marionette: 'backbone.marionette',
+        marionette: 'backbone.marionette.min',
         'featherlight': 'featherlight.min',
         'underscore': 'underscore-min',
         'featherlightGallery': 'featherlight.gallery.min',
