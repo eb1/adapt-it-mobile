@@ -419,19 +419,24 @@ define(function (require) {
                     }
                 } else {
                     console.log("setBookmarks() - user has bookmarks defined");
+                    if (window.Application.ProjectList.length === 0) {
+                        var msg = "ERROR: user has bookmarks, but there are no projects defined";
+                        console.log(msg);
+                        deferred.reject(msg);
+                        return;
+                    }
                     // there should be a bookmarkid in the user's bookmark array that points to the current project -
                     // set our current bookmark to that one
                     window.Application.bookmarkList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}).then(function () {
                         console.log("setBookmarks() - bookmark list retrieved, length: " + window.Application.bookmarkList.length);
-                        window.Application.ProjectList.each(function (model, index) {
-                            if (window.Application.user.get("bookmarks").indexOf(model.get("bookmarkid")) > -1) {
-                                // this bookmark is in the user's list -- set it as the current bookmark
+                        for(var i=0; i<window.Application.ProjectList.length; i++) {
+                            if (window.Application.user.get("bookmarks").indexOf(window.Application.ProjectList.at(i).get("bookmarkid")) > -1) {
                                 console.log("setBookmarks() - found matching bookmark, setting");
                                 window.Application.currentBookmark = model;
                                 deferred.resolve();
                                 return;
                             }
-                        });
+                        }
                         // if we got here, we didn't find a valid bookmark. TDB - error?
                         console.log("setBookmarks() - didn't find a matching bookmark, setting to the first in the list");
                         window.Application.currentBookmark = window.Application.bookmarkList.at(0);
@@ -544,8 +549,11 @@ define(function (require) {
             // New Project view (wizard)
             newProject: function () {
                 var proj = new projModel.Project();
+                var newBookmark = new userModels.Bookmark(); // nothing set yet
                 newProjectView = new ProjectViews.NewProjectView({model: proj});
                 newProjectView.delegateEvents();
+                newProjectView.bookmark = newBookmark;
+                this.bookmarkList.add(newBookmark);
                 this.ProjectList.add(proj);
                 this.main.show(newProjectView);
             },
