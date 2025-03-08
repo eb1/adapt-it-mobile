@@ -161,7 +161,7 @@ define(function (require) {
                     }
                     if (window.Application.currentBookmark) {
                         console.log("HomeView::onShow() - current bookmark set, updating actions");
-                        this.updateActions;
+                        this.updateActions();
                     } else {
                         window.Application.setBookmarks().done(this.updateActions);
                     }

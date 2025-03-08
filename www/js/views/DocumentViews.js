@@ -11,6 +11,10 @@ define(function (require) {
 
     "use strict";
 
+    const   spaceRE     = /\s+/,            // select 1+ space chars
+            nonSpaceRE  = /[^\s+]/,         // select 1+ non-space chars
+            CRLF_RE     = /(\r\n|\r|\n)/g;  // select all CRLF variants
+
     var $               = require('jquery'),
         Underscore      = require('underscore'),
         Handlebars      = require('handlebars'),
@@ -40,7 +44,6 @@ define(function (require) {
         isKB            = false,
         isGlossKB       = false,
         isProjectFile   = false,
-        fileList        = [],
         fileCount       = 0,
         batchesSent     = 0,
         intervalID      = 0,
@@ -421,8 +424,6 @@ define(function (require) {
                 // We assume these are just text with no markup,
                 // in a single chapter (this could change if needed)
                 var readTextDoc = function (contents) {
-                    var spaceRE = /\s+/;        // select 1+ space chars
-                    var nonSpaceRE = /[^\s+]/;  // select 1+ non-space chars
                     var newline = new RegExp('[\n\r\f\u2028\u2029]+', 'g');
                     var i = 0;
                     var chaps = [];
@@ -606,8 +607,6 @@ define(function (require) {
                 // (https://ubsicap.github.io/usx/elements.html)
                 var readUSXDoc = function (contents) {
                     var sp = null;
-                    var spaceRE = /\s+/;        // select 1+ space chars
-                    var nonSpaceRE = /[^\s+]/;  // select 1+ non-space chars
                     var chaps = [];
                     var xmlDoc = $.parseXML(contents.replace("<optbreak />", "//"));
                     var $xml = $(xmlDoc);
@@ -2057,8 +2056,6 @@ define(function (require) {
                 // Languages must match the current project's source AND target language
                 var readXMLDoc = function (contents) {
                     var prepunct = "";
-                    var spaceRE = /\s+/;        // select 1+ space chars
-                    var nonSpaceRE = /[^\s+]/;  // select 1+ non-space chars
                     var follpunct = "";
                     var src = "";
                     var mkr = "";
@@ -2658,8 +2655,6 @@ define(function (require) {
                 //    dialog option.
                 var readSFMLexDoc = function (contents) {
                     var defer = $.Deferred(),
-                        spaceRE = /\s+/,        // select 1+ space chars
-                        nonSpaceRE = /[^\s+]/,  // select 1+ non-space chars
                         i = 0,
                         refstrings = [],
                         curDate = new Date(),
@@ -2899,8 +2894,6 @@ define(function (require) {
                     var scrIDList = new scrIDs.ScrIDCollection();
                     var chapterName = "";
                     var sp = null;
-                    var spaceRE = /\s+/;        // select 1+ space chars
-                    var nonSpaceRE = /[^\s+]/;  // select 1+ non-space chars
                     var markerList = new USFM.MarkerCollection();
                     var lastAdapted = 0;
                     var verseCount = 0;
@@ -2913,6 +2906,7 @@ define(function (require) {
                     var chapNumber = 0;
                     var stridx = 0;
                     var verseNum = "";
+                    var verseStartIdx = 0;
                     var verseEndIdx = 0;
                     var verseFound = false;
                     var chaps = [];
@@ -2922,6 +2916,8 @@ define(function (require) {
                     var strExistingVerse = "";
                     var encoding = "";
                     var spsExisting = null;
+                    var bVIDFound = false;
+                    var markerCache = "";
                     var defer = $.Deferred();
 
                     console.log("Reading USFM file:" + fileName);
@@ -3139,6 +3135,10 @@ define(function (require) {
                         var tmpObj = null;
                         var tmpMk = "";
                         var num = /\d/;
+                        var strContentsNoCRLF = "";
+                        if (bOverride === true) {
+                            strContentsNoCRLF = contents.replace(CRLF_RE, " ");
+                        }
 
                         // build SourcePhrases
                         arr = contents.replace(/\\/gi, " \\").split(spaceRE); // add space to make sure markers get put in a separate token
@@ -3241,38 +3241,73 @@ define(function (require) {
                                             if (verseFound === true) {
                                                 console.log("Merging verse w/end marker: " + spsExisting[tmpIdx].get("markers") + ", " + verseID);
                                                 verseFound = false; // clear the flag
-                                                // verse needs merging -- collect the source phrases up to the next verse in the DB
-                                                // compare the imported verse string to the verse in the DB
-                                                if (contents.indexOf("\\v ", contents.indexOf(verseNum) + 2) > 0) {
-                                                    verseEndIdx = contents.indexOf("\\v ", contents.indexOf(verseNum) + 2);
-                                                } else {
-                                                    verseEndIdx = contents.length - 1; // last verse
-                                                }
-                                                // pull out the imported verse, starting at the markers for the verse in the DB
-                                                // (we could have some before the \\v -- like a \\p, for example)
-                                                strImportedVerse = contents.substring(contents.indexOf(spsExisting[tmpIdx].get("markers")), verseEndIdx).replace(spaceRE, " ");
+                                                // verse needs merging -- compare the DB to what we're importing
                                                 // reconstitute the verse in the DB
+                                                bVIDFound = false;
+                                                markerCache = "";
                                                 for (tmpIdx=0; tmpIdx<spsExisting.length; tmpIdx++) {
+                                                    // as we work through the ordered spsExisting array to build strExistingVerse, also pull out the
+                                                    // equivalent indices in the imported contents string so we can build strImportedVerse
                                                     if (spsExisting[tmpIdx].get("vid") === verseID) {
-                                                        // concatenate
-                                                        // add markers, and if needed, pretty-print the text on a newline
+                                                        if (bVIDFound === false) {
+                                                            bVIDFound = true;
+                                                            // this is the start of the verse in the db - pull out the markers and find where they
+                                                            // occur in the imported contents string; this will be our start for the strImportedVerse
+                                                            if (strContentsNoCRLF.indexOf(spsExisting[tmpIdx].get("markers")) > -1) {
+                                                                verseStartIdx = strContentsNoCRLF.indexOf(spsExisting[tmpIdx].get("markers"));
+                                                            }
+                                                        }
+                                                        // concatenate strExistingVerse (markers + source)
                                                         tmpMarkers = spsExisting[tmpIdx].get("markers");
                                                         if (tmpMarkers.length > 0) {
-                                                            if ((tmpMarkers.indexOf("\\v") > -1) || (tmpMarkers.indexOf("\\c") > -1) ||
-                                                                    (tmpMarkers.indexOf("\\p") > -1) || (tmpMarkers.indexOf("\\id") > -1) ||
-                                                                    (tmpMarkers.indexOf("\\h") > -1) || (tmpMarkers.indexOf("\\toc") > -1) ||
-                                                                    (tmpMarkers.indexOf("\\mt") > -1)) {
-                                                                // pretty-printing -- add a newline so the output looks better
-                                                                if (strExistingVerse.length > 0) {
-                                                                    strExistingVerse = strExistingVerse.trim() + "\n"; // newline
-                                                                }
-                                                            }
                                                             // now add the markers and a space
                                                             strExistingVerse += tmpMarkers + " ";
                                                         }
                                                         strExistingVerse += spsExisting[tmpIdx].get("source") + " ";
+                                                    } else if (bVIDFound === true) {
+                                                        // this is the start of the verse _after_ verseID - pull out the markers and find where they
+                                                        // occur in the imported contents string; this will be our ENDING for the strImportedVerse
+                                                        markerCache = spsExisting[tmpIdx].get("markers"); // save the next verse's markers
+                                                        bVIDFound = false; // reset the flag
+                                                        break; // done building strExistingVerse -- exit the for loop
                                                     }
                                                 }
+                                                // build the imported verse
+                                                // Ending index
+                                                if (contents.indexOf("\\v ", contents.indexOf(verseNum) + 2) > 0) {
+                                                    // not the last verse -- the ending index could have some markers before the next verse
+                                                    // (e.g., "\p \v nnn")
+                                                    if (markerCache.length > 0) {
+                                                        verseEndIdx = strContentsNoCRLF.indexOf(markerCache); // up to, but not including the next verse's markers
+                                                        markerCache = ""; // clear out the cached value
+                                                    } else {
+                                                        if (bVIDFound === true) {
+                                                            // last verse in chapter
+                                                            console.log("merge verse - end of chapter");
+                                                            if (contents.indexOf("\\c ", verseStartIdx) > 0) {
+                                                                verseEndIdx = contents.indexOf("\\c", verseStartIdx);
+                                                            }
+                                                        } else {
+                                                            if (bVIDFound === true) {
+                                                                // last verse in chapter
+                                                                console.log("merge verse - end of chapter");
+                                                                if (contents.indexOf("\\c ", verseStartIdx) > 0) {
+                                                                    verseEndIdx = contents.indexOf("\\c", verseStartIdx);
+                                                                }
+                                                            } else {
+                                                                console.log("merge verse - found a verse missing markers");
+                                                                verseEndIdx = contents.indexOf("\\v ", contents.indexOf(verseNum) + 2); // sanity check (shouldn't happen)
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    verseEndIdx = contents.length - 1; // last verse
+                                                }
+                                                // now clip out the imported verse and normalize CRLF and spaces
+                                                strImportedVerse = contents.substring(verseStartIdx, verseEndIdx);
+                                                strImportedVerse = strImportedVerse.replace(CRLF_RE, " "); // remove CRLF chars
+                                                strImportedVerse = strImportedVerse.replace(spaceRE, " "); // single spaces only
+                                                // done! Does it match what's in the DB?
                                                 if (strImportedVerse.trim() !== strExistingVerse.replace(spaceRE, " ").trim()) {
                                                     // verses differ -- 
                                                     // first, align arr[i] with the marker data from our DB verse, so we don't lose any
@@ -3283,7 +3318,7 @@ define(function (require) {
                                                     if (mkrArray[0].length === 0) {
                                                         mkrIdx++;
                                                     }
-                                                    while (arr[i] !== mkrArray[mkrIdx]) {
+                                                    while ((arr[i] !== mkrArray[mkrIdx]) && (i>= 0)) {
                                                         // go backwards in arr[] until we find the beginning of the markers
                                                         i--;
                                                     }
@@ -3364,6 +3399,7 @@ define(function (require) {
                                     markers += " " + arr[i];
                                 }
                                 i++;
+                                // end marker token
                             } else if (arr[i].length === 1 && puncts.indexOf(arr[i]) > -1) {
                                 // punctuation token -- add to the prepuncts
                                 prepuncts += arr[i];
@@ -3461,9 +3497,11 @@ define(function (require) {
                                             // either there's a verse first OR there are no more chapters -- 
                                             // either way, we want the string up to the verse
                                             strImportedVerse = contents.substring(contentsIdx, verseIdx);
+                                            verseStartIdx = verseIdx;
                                         } else {
                                             // take the string up to the chapter
                                             strImportedVerse = contents.substring(contentsIdx, chapIdx);
+                                            verseStartIdx = chapIdx;
                                         }
                                     }
                                     strImportedVerse = strImportedVerse.replace(spaceRE, " ");
@@ -3556,38 +3594,49 @@ define(function (require) {
                                         if (verseFound === true) {
                                             console.log("Merging verse: " + spsExisting[tmpIdx].get("markers") + ", " + verseID);
                                             verseFound = false; // clear the flag
-                                            // verse needs merging -- collect the source phrases up to the next verse in the DB
-                                            // compare the imported verse string to the verse in the DB
-                                            if (contents.indexOf("\\v ", contents.indexOf(verseNum) + 2) > 0) {
-                                                verseEndIdx = contents.indexOf("\\v ", contents.indexOf(verseNum) + 2);
-                                            } else {
-                                                verseEndIdx = contents.length - 1; // last verse
-                                            }
-                                            // pull out the imported verse, starting at the markers for the verse in the DB
-                                            // (we could have some before the \\v -- like a \\p, for example)
-                                            strImportedVerse = contents.substring(contents.indexOf(spsExisting[tmpIdx].get("markers")), verseEndIdx).replace(spaceRE, " ");
+                                            // verse needs merging -- compare the DB to what we're importing
                                             // reconstitute the verse in the DB
+                                            bVIDFound = false;
+                                            markerCache = "";
                                             for (tmpIdx=0; tmpIdx<spsExisting.length; tmpIdx++) {
                                                 if (spsExisting[tmpIdx].get("vid") === verseID) {
-                                                    // concatenate
-                                                    // add markers, and if needed, pretty-print the text on a newline
+                                                    if (bVIDFound === false) {
+                                                        bVIDFound = true;
+                                                        if (strContentsNoCRLF.indexOf(spsExisting[tmpIdx].get("markers"), verseStartIdx) > -1) {
+                                                            verseStartIdx = strContentsNoCRLF.indexOf(spsExisting[tmpIdx].get("markers"));
+                                                        }
+                                                    }
+                                                    // concatenate (markers + source)
                                                     tmpMarkers = spsExisting[tmpIdx].get("markers");
                                                     if (tmpMarkers.length > 0) {
-                                                        if ((tmpMarkers.indexOf("\\v") > -1) || (tmpMarkers.indexOf("\\c") > -1) ||
-                                                                (tmpMarkers.indexOf("\\p") > -1) || (tmpMarkers.indexOf("\\id") > -1) ||
-                                                                (tmpMarkers.indexOf("\\h") > -1) || (tmpMarkers.indexOf("\\toc") > -1) ||
-                                                                (tmpMarkers.indexOf("\\mt") > -1)) {
-                                                            // pretty-printing -- add a newline so the output looks better
-                                                            if (strExistingVerse.length > 0) {
-                                                                strExistingVerse = strExistingVerse.trim() + "\n"; // newline
-                                                            }
-                                                        }
                                                         // now add the markers and a space
                                                         strExistingVerse += tmpMarkers + " ";
                                                     }
                                                     strExistingVerse += spsExisting[tmpIdx].get("source") + " ";
+                                                } else if (bVIDFound === true) {
+                                                    markerCache = spsExisting[tmpIdx].get("markers"); // save the next verse's markers
+                                                    bVIDFound = false; // reset the flag
+                                                    break; // done building strExistingVerse -- exit the for loop
                                                 }
                                             }
+                                            // compare the imported verse string to the verse in the DB
+                                            if (contents.indexOf("\\v ", contents.indexOf(verseNum) + 2) > 0) {
+                                                // not the last verse -- the ending index could have some markers before the next verse
+                                                // (e.g., "\p \v nnn")
+                                                if (markerCache.length > 0) {
+                                                    verseEndIdx = strContentsNoCRLF.indexOf(markerCache); // up to, but not including the next verse's markers
+                                                    markerCache = ""; // clear out the cached value
+                                                } else {
+                                                    console.log("merge verse - found a verse missing markers");
+                                                    verseEndIdx = contents.indexOf("\\v ", contents.indexOf(verseNum) + 2); // sanity check (shouldn't happen)
+                                                }
+                                            } else {
+                                                verseEndIdx = contents.length - 1; // last verse
+                                            }
+                                            // 
+                                            strImportedVerse = contents.substring(verseStartIdx, verseEndIdx);
+                                            strImportedVerse = strImportedVerse.replace(CRLF_RE, " "); // remove CRLF chars
+                                            strImportedVerse = strImportedVerse.replace(spaceRE, " "); // single spaces only
                                             if (strImportedVerse.trim() !== strExistingVerse.replace(spaceRE, " ").trim()) {
                                                 // verses differ -- 
                                                 // first, align arr[i] with the marker data from our DB verse, so we don't lose any
@@ -3598,7 +3647,7 @@ define(function (require) {
                                                 if (mkrArray[0].length === 0) {
                                                     mkrIdx++;
                                                 }
-                                                while (arr[i] !== mkrArray[mkrIdx]) {
+                                                while ((arr[i] !== mkrArray[mkrIdx]) && (i>= 0)) {
                                                     // go backwards in arr[] until we find the beginning of the markers
                                                     i--;
                                                 }
@@ -4054,10 +4103,10 @@ define(function (require) {
                             index = contents.indexOf("\\h ", index); // first \\h in content
                             if (index > -1) {
                                 // there is a \h marker -- look backwards for the nearest "a" attribute (this is the adapted name)
-                                var i = contents.lastIndexOf("s=", index) + 3;
+                                var idxs = contents.lastIndexOf("s=", index) + 3;
                                 // Sanity check -- this \\h element might not have an adaptation
                                 // (if it doesn't, there won't be a a="" after the s="" attribute)
-                                if (contents.lastIndexOf("a=", index) > i) {
+                                if (contents.lastIndexOf("a=", index) > idxs) {
                                     // Okay, this looks legit. Pull out the adapted book name from the file.
                                     index = contents.lastIndexOf("a=", index) + 3;
                                     newFileName = contents.substr(index, contents.indexOf("\"", index) - index);
@@ -6403,7 +6452,13 @@ define(function (require) {
                 console.log("onOK - entry");
                 if (bookName.length === 0) {
                     // prevent re-entry -- just go to the home page
-                    window.location.replace("");
+                    if (window.history.length > 1) {
+                        // there actually is a history -- go back
+                        window.history.back();
+                    } else {
+                        // no history (import link from outside app) -- just go home
+                        window.location.replace("");
+                    }
                     return;
                 }
                 if (isKB === false) {

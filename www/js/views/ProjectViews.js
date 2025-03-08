@@ -241,8 +241,13 @@ define(function (require) {
                                 } else {
                                     // No -- just exit
                                 }
-                                // head back to the home page
-                                window.location.replace("");
+                                if (window.history.length > 1) {
+                                    // there actually is a history -- go back
+                                    window.history.back();
+                                } else {
+                                    // no history (import link from outside app) -- just go home
+                                    window.location.replace("");
+                                }
                             },
                             i18n.t('view.ttlMain'),
                             [i18n.t('view.lblYes'), i18n.t('view.lblNo')]
@@ -263,8 +268,13 @@ define(function (require) {
                         } else {
                             // No -- just exit
                         }
-                        // head back to the home page
-                        window.location.replace("");
+                        if (window.history.length > 1) {
+                            // there actually is a history -- go back
+                            window.history.back();
+                        } else {
+                            // no history (import link from outside app) -- just go home
+                            window.location.replace("");
+                        }
                     }
                 } else {
                     // no current project -- set it now
@@ -274,9 +284,14 @@ define(function (require) {
                     }
                     // also set the current bookmark
                     window.Application.currentBookmark = newBookmark;
-                    // head back to the home page
-                    window.location.replace("");
-                }
+                    if (window.history.length > 1) {
+                        // there actually is a history -- go back
+                        window.history.back();
+                    } else {
+                        // no history (import link from outside app) -- just go home
+                        window.location.replace("");
+                    }
+            }
             },
             // User clicked on the (mobile) Select file button --
             // call getFile() on the chooser plugin, and if we get a file back, import it
@@ -946,7 +961,13 @@ define(function (require) {
                 window.Application.spList.length = 0;
                 window.Application.kbList.length = 0;
                 // head back to the home page
-                window.location.replace("");
+                if (window.history.length > 1) {
+                    // there actually is a history -- go back
+                    window.history.back();
+                } else {
+                    // no history (import link from outside app) -- just go home
+                    window.location.replace("");
+                }
             },
             // User clicked the Delete project. Confirms the delete intent, and then calls reallyDeleteProj() to actually delete it.
             onDeleteProject: function (event) {
@@ -976,8 +997,13 @@ define(function (require) {
                                     // save the value for later
                                     localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));
                                 }
-                                // navigate to the home screen
-                                window.location.replace("");
+                                if (window.history.length > 1) {
+                                    // there actually is a history -- go back
+                                    window.history.back();
+                                } else {
+                                    // no history (import link from outside app) -- just go home
+                                    window.location.replace("");
+                                }
                             } else {
                                 // didn't delete the current project -- just remove the item from the UI
                                 // (We're in a callback, so just hide the item rather than redrawing)
@@ -1000,8 +1026,13 @@ define(function (require) {
                                 // save the value for later
                                 localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));
                             }
-                            // navigate to the home screen
-                            window.location.replace("");
+                            if (window.history.length > 1) {
+                                // there actually is a history -- go back
+                                window.history.back();
+                            } else {
+                                // no history (import link from outside app) -- just go home
+                                window.location.replace("");
+                            }    
                         } else {
                             // didn't delete the current project -- just redraw the UI
                             this.showProjects();
