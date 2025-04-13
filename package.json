@@ -45,7 +45,7 @@
     "crypto-randomuuid": "^1.0.0",
     "electron-builder": "^23.0.3",
     "gulp-uglify": "^3.0.2",
-    "npx": "^3.0.0"
+    "npx": "^10.2.2"
   },
   "bugs": {
     "url": "https://github.com/adapt-it/adapt-it-mobile/issues"
