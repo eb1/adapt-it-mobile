@@ -43,7 +43,7 @@
     "cordova-plugin-save-dialog": "2.0.1",
     "cordova-plugin-statusbar": "^4.0.0",
     "crypto-randomuuid": "^1.0.0",
-    "electron-builder": "^23.0.3",
+    "electron-builder": "^24.13.2",
     "gulp-uglify": "^3.0.2",
     "npx": "^3.0.0"
   },
