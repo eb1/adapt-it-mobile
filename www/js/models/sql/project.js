@@ -1033,12 +1033,23 @@ define(function (require) {
 
             // Removes all projects from the collection (and database)
             clearAll: function () {
+                var deferred = $.Deferred();
                 window.Application.db.transaction(function (tx) {
-                    tx.executeSql('DELETE from project;');
-                    projects.length = 0;
+                    tx.executeSql('DELETE from project;', [], function (tx, res) {
+                        console.log("project DELETE (all) ok.");
+                        projects.length = 0;
+                        deferred.resolve();
+                    }, function (tx, err) {
+                        console.log("project DELETE (all) error: " + err.message);
+                        deferred.reject(e);
+                    });
                 }, function (err) {
                     console.log("DELETE error: " + err.message);
+                    deferred.reject(e);
+                }, function () { // TODO: do we need this one?
+                    deferred.resolve();
                 });
+                return deferred.promise();
             },
 
             sync: function (method, model, options) {
