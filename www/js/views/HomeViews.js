@@ -159,7 +159,12 @@ define(function (require) {
                     if (window.Application.BookList.length === 0) {
                         window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
                     }
-                    window.Application.setBookmarks().done(this.updateActions);
+                    if (window.Application.currentBookmark) {
+                        console.log("HomeView::onShow() - current bookmark set, updating actions");
+                        this.updateActions();
+                    } else {
+                        window.Application.setBookmarks().done(this.updateActions);
+                    }
                 }
 
                 clickCount = 0;

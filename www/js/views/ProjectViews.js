@@ -241,8 +241,13 @@ define(function (require) {
                                 } else {
                                     // No -- just exit
                                 }
-                                // head back to the home page
-                                window.location.replace("");
+                                if (window.history.length > 1) {
+                                    // there actually is a history -- go back
+                                    window.history.back();
+                                } else {
+                                    // no history (import link from outside app) -- just go home
+                                    window.location.replace("");
+                                }
                             },
                             i18n.t('view.ttlMain'),
                             [i18n.t('view.lblYes'), i18n.t('view.lblNo')]
@@ -263,8 +268,13 @@ define(function (require) {
                         } else {
                             // No -- just exit
                         }
-                        // head back to the home page
-                        window.location.replace("");
+                        if (window.history.length > 1) {
+                            // there actually is a history -- go back
+                            window.history.back();
+                        } else {
+                            // no history (import link from outside app) -- just go home
+                            window.location.replace("");
+                        }
                     }
                 } else {
                     // no current project -- set it now
@@ -274,9 +284,14 @@ define(function (require) {
                     }
                     // also set the current bookmark
                     window.Application.currentBookmark = newBookmark;
-                    // head back to the home page
-                    window.location.replace("");
-                }
+                    if (window.history.length > 1) {
+                        // there actually is a history -- go back
+                        window.history.back();
+                    } else {
+                        // no history (import link from outside app) -- just go home
+                        window.location.replace("");
+                    }
+            }
             },
             // User clicked on the (mobile) Select file button --
             // call getFile() on the chooser plugin, and if we get a file back, import it
@@ -946,7 +961,13 @@ define(function (require) {
                 window.Application.spList.length = 0;
                 window.Application.kbList.length = 0;
                 // head back to the home page
-                window.location.replace("");
+                if (window.history.length > 1) {
+                    // there actually is a history -- go back
+                    window.history.back();
+                } else {
+                    // no history (import link from outside app) -- just go home
+                    window.location.replace("");
+                }
             },
             // User clicked the Delete project. Confirms the delete intent, and then calls reallyDeleteProj() to actually delete it.
             onDeleteProject: function (event) {
@@ -976,8 +997,13 @@ define(function (require) {
                                     // save the value for later
                                     localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));
                                 }
-                                // navigate to the home screen
-                                window.location.replace("");
+                                if (window.history.length > 1) {
+                                    // there actually is a history -- go back
+                                    window.history.back();
+                                } else {
+                                    // no history (import link from outside app) -- just go home
+                                    window.location.replace("");
+                                }
                             } else {
                                 // didn't delete the current project -- just remove the item from the UI
                                 // (We're in a callback, so just hide the item rather than redrawing)
@@ -1000,8 +1026,13 @@ define(function (require) {
                                 // save the value for later
                                 localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));
                             }
-                            // navigate to the home screen
-                            window.location.replace("");
+                            if (window.history.length > 1) {
+                                // there actually is a history -- go back
+                                window.history.back();
+                            } else {
+                                // no history (import link from outside app) -- just go home
+                                window.location.replace("");
+                            }    
                         } else {
                             // didn't delete the current project -- just redraw the UI
                             this.showProjects();
@@ -1552,8 +1583,11 @@ define(function (require) {
             }
         }),
 
+        // NewProjectView - wizard for creating a new project
+        // The model here is a project object; we also keep a bookmark associated with the current user and project object
         NewProjectView = Marionette.LayoutView.extend({
             template: Handlebars.compile(tplNewProject),
+            bookmark: null, // set in Application::newProject()
             regions: {
                 container: "#StepContainer"
             },
@@ -1566,6 +1600,7 @@ define(function (require) {
                 return this;
             },
             onShow: function () {
+                console.log("NewProjectView::onShow() - entry")
                 this.ShowStep(step);
             },
             ////
@@ -1832,7 +1867,12 @@ define(function (require) {
                     if (this.model.get("projectid") !== "") {
                         // it's been saved to the DB -- delete it from the DB as well
                         this.model.destroy(); 
-                    } 
+                    }
+                    window.Application.bookmarkList.remove(this.bookmark); // remove from collection
+                    if (this.bookmark.get("bookmarkid") !== "") {
+                        // bookmark has been saved to the DB - delete
+                        this.bookmark.destroy();
+                    }
                     window.history.go(-1); // return to welcome screen
                 } else {
                     // pull the info from the current step (must pass validation)
@@ -1861,31 +1901,13 @@ define(function (require) {
                             window.Application.spList.length = 0;
                             window.Application.kbList.length = 0;
                         }
-                        // create a new bookmark, and set it to be our current one
-                        var bookmarks = window.Application.user.get("bookmarks");
-                        var bookmarkid = window.Application.generateUUID();
-                        var newBookmark = new userModels.Bookmark({
-                            bookmarkid: bookmarkid,
-                            projectid: this.model.get('projectid') // note: no books, chapters, spid set
-                        });
-                        // save and add to the collection
-                        newBookmark.save();
-                        window.Application.currentBookmark = newBookmark;
-                        window.Application.bookmarkList.add(newBookmark);
-                        // update the user's bookmarks array
-                        bookmarks.push(bookmarkid);
-                        window.Application.user.set("bookmarks", bookmarks, {silent: true});
-                        window.Application.user.update();
-
-                        // set the current project to our new one
+                        // set the current project and bookmark to our new ones
+                        console.log("Finish: setting current project=" + this.model.get("projectid"), ", bookmark=" + this.bookmark.get("bookmarkid"));
                         window.Application.currentProject = this.model;
+                        window.Application.currentBookmark = this.bookmark;
                         localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));
                         // head back to the home page
-                        window.location.replace("");
-                        
-                        // head back to the home page
-//                        window.history.go(-1);
-//                        window.Application.home();
+                        window.history.back(); // return to the home page
                     }
                 }
             },
@@ -1990,11 +2012,23 @@ define(function (require) {
                     if (this.model.get("projectid") === "") {
                         value = window.Application.generateUUID();
                         this.model.set("projectid", value, {silent: true});
+                        // also set the bookmark's values (projectid, bookmarkid)
+                        var bookmarks = window.Application.user.get("bookmarks");
+                        this.bookmark.set("projectid", value, {silent: true});
+                        value = window.Application.generateUUID();
+                        this.bookmark.set("bookmarkid", value, {silent: true});
+                        window.Application.bookmarkList.add(this.bookmark);
+                        this.bookmark.save();
+                        // update the user's bookmarks array
+                        bookmarks.push(value);
+                        window.Application.user.set("bookmarks", bookmarks, {silent: true});
+                        window.Application.user.update();
                     }
                     this.model.set("name", i18n.t("view.lblSourceToTargetAdaptations", {
                         source: (this.model.get("SourceVariant").length > 0) ? this.model.get("SourceVariant") : this.model.get("SourceLanguageName"),
                         target: (this.model.get("TargetVariant").length > 0) ? this.model.get("TargetVariant") : this.model.get("TargetLanguageName")}), {silent: true});
-                    console.log("id: " + value);
+                    console.log("projectid: " + this.model.get("projectid"));
+                    console.log("bookmarkid: " + this.bookmark.get("bookmarkid"));
                     break;
                 case 3: // fonts
                     break;
@@ -2022,7 +2056,6 @@ define(function (require) {
 
             OnNewProject: function () {
                 // create a new project model object
-                //this.openDB();
                 this.numSteps = 6;
                 step = 1;
                 languages = new langs.LanguageCollection();
