@@ -985,8 +985,8 @@ define(function (require) {
 
                     // done setting the project and bookmark list -- head back to the home page
                     if (window.history.length > 1) {
-                        // there actually is a history -- go back
-                        window.history.back();
+                        // jump back 2 to the home page
+                        window.history.go(-2);
                     } else {
                         // no history (import link from outside app) -- just go home
                         window.location.replace("");
