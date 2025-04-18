@@ -960,14 +960,38 @@ define(function (require) {
                 window.Application.ChapterList.length = 0;
                 window.Application.spList.length = 0;
                 window.Application.kbList.length = 0;
-                // head back to the home page
-                if (window.history.length > 1) {
-                    // there actually is a history -- go back
-                    window.history.back();
-                } else {
-                    // no history (import link from outside app) -- just go home
-                    window.location.replace("");
-                }
+                // set the currentBookmark to the one associated with this projectid
+                // there should be a bookmarkid in the user's bookmark array that points to the current project -
+                // set our current bookmark to that one
+                window.Application.bookmarkList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}).then(function () {
+                    console.log("onSelectProject() - bookmark list retrieved, length: " + window.Application.bookmarkList.length);
+                    var projid = window.Application.currentProject.get("projectid");
+                    for(var i=0; i<window.Application.bookmarkList.length; i++) {
+                        if (window.Application.bookmarkList.at(i).get("projectid") === projid) {
+                            // this bookmark refers to the current project. Is it in our user's bookmarks array?
+                            if (window.Application.user.get("bookmarks").indexOf(window.Application.bookmarkList.at(i).get("bookmarkid")) > -1) {
+                                // yes -- this is the bookmarkid we want
+                                console.log("onSelectProject() - found matching bookmark, setting");
+                                window.Application.currentBookmark = window.Application.bookmarkList.at(i);
+                                break;
+                            }
+                        }
+                    }
+                    // Sanity check for a valid bookmark
+                    if (window.Application.currentBookmark === null) {
+                        console.log("onSelectProject() - didn't find a matching bookmark, setting to the first in the list");
+                        window.Application.currentBookmark = window.Application.bookmarkList.at(0);
+                    }
+
+                    // done setting the project and bookmark list -- head back to the home page
+                    if (window.history.length > 1) {
+                        // there actually is a history -- go back
+                        window.history.back();
+                    } else {
+                        // no history (import link from outside app) -- just go home
+                        window.location.replace("");
+                    }
+                });
             },
             // User clicked the Delete project. Confirms the delete intent, and then calls reallyDeleteProj() to actually delete it.
             onDeleteProject: function (event) {

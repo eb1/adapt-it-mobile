@@ -166,32 +166,39 @@ define(function (require) {
             if (window.Application.BookList.length === 0) {
                 // no books left in the list -- clear out the last adapted chapter and book
                 // (don't create a new bookmark)
-                window.Application.bookmarkList.remove(window.Application.currentBookmark);                
-                window.Application.currentBookmark = null;
+                console.log("All books deleted - clearing bookmark");
+                window.Application.currentBookmark.set('name', "");
+                window.Application.currentBookmark.set('bookid', "");
+                window.Application.currentBookmark.set('chapterid', "");
+                window.Application.currentBookmark.set('spid', "");
+                window.Application.currentBookmark.save();
+                // booklist is empty - kill it with fire
+                window.Application.BookList.clearAll();
+                window.Application.BookList.reset();
             } else if (deletedCurrentDoc === true) {
-                // We just deleted the current Document/book
-                window.Application.bookmarkList.remove(window.Application.currentBookmark);                
-                window.Application.currentBookmark = null;
-                // create a bookmark pointing to the first chapter of the first book in our book list
+                // We just deleted the current Document/book - 
+                // update the currentBookmark to point at the first book in our booklist instead
                 var bk = window.Application.BookList.at(0);
+                var ch = window.Application.ChapterList.findWhere({'bookid': bk.get("bookid")});
                 if (bk) {
-                    // got it -- set the lastAdapted stuff to the first chapter
-                    var cid = bk.get("chapters")[0];
-                    var bookmarkid = window.Application.generateUUID();
-                    var newBookmark = new userModels.Bookmark({
-                        bookmarkid: bookmarkid,
-                        projectid: bk.get('projectid'),
-                        bookname: bk.get("name"),
-                        bookid: bk.get("bookid"),
-                        chapterid: cid
-                    });
-                    // save and add to the collection
-                    newBookmark.save();
-                    window.Application.bookmarkList.add(newBookmark);
-                    // this is the current project -- set this bookmark as the current bookmark
-                    window.Application.currentBookmark = newBookmark;
+                    // got it -- update the bookmark to the first chapter of this book
+                    console.log("Current book deleted, updating bookmark to: " + ch.get('name'));
+                    window.Application.currentBookmark.set('name', ch.get('name'));
+                    window.Application.currentBookmark.set('bookid', bk.get('bookid'));
+                    window.Application.currentBookmark.set('chapterid', ch.get('chapterid'));
+                    window.Application.currentBookmark.set('spid', ""); // beginning of chapter
+                } else {
+                    // no books in the list (shouldn't happen) - clear out book info
+                    console.log("Current book deleted, no other books found - clearing bookmark ");
+                    window.Application.currentBookmark.set('name', "");
+                    window.Application.currentBookmark.set('bookid', "");
+                    window.Application.currentBookmark.set('chapterid', "");
+                    window.Application.currentBookmark.set('spid', "");
+                    // booklist is empty - kill it with fire
+                    window.Application.BookList.clearAll();
+                    window.Application.BookList.reset();
                 }
-                window.Application.currentProject.save();
+                window.Application.currentBookmark.save();
             }
         },
         ////////
@@ -1194,7 +1201,13 @@ define(function (require) {
 
             // Done button handler -- just closes out selection mode
             onDone: function () {
-                this.toggleSelect(); // call toggleSelect() to close out selection mode
+                if ($('.li-chk.chk-selected').length === 0) {
+                    // no more docs -- just navigate back to the home page
+                    console.log("onDone() / no items left -- navigating to home page");
+                    window.history.back(); // return to the home page                    
+                } else {
+                    this.toggleSelect(); // call toggleSelect() to close out selection mode
+                }
             },
 
             // Select menu handler -- toggles between browse and document selection modes

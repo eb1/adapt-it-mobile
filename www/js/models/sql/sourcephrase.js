@@ -198,8 +198,12 @@ define(function (require) {
             // Removes all sourcephrases from the collection (and database)
             clearAll: function () {
                 window.Application.db.transaction(function (tx) {
-                    tx.executeSql('DELETE from sourcephrase;');
-                    sourcephrases.length = 0;
+                    tx.executeSql('DELETE from sourcephrase;', [], function (tx, res) {
+                        console.log("sourcephrase DELETE (all) ok.");
+                        sourcephrases.length = 0;
+                    }, function (tx, err) {
+                        console.log("sourcephrase DELETE (all) error: " + err.message);
+                    });
                 }, function (err) {
                     console.log("DELETE error: " + err.message);
                 });

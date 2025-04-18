@@ -139,8 +139,12 @@ define(function (require) {
             // Removes all chapters from the collection (and database)
             clearAll: function () {
                 window.Application.db.transaction(function (tx) {
-                    tx.executeSql('DELETE from chapter;');
-                    chapters.length = 0;
+                    tx.executeSql('DELETE from chapter;', [], function (tx, res) {
+                        console.log("chapter DELETE (all) ok.");
+                        chapters.length = 0;
+                    }, function (tx, err) {
+                        console.log("chapter DELETE (all) error: " + err.message);
+                    });
                 }, function (err) {
                     console.log("DELETE error: " + err.message);
                 });

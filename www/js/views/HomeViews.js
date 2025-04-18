@@ -36,30 +36,33 @@ define(function (require) {
         // title ("Adapt It Mobile") 5 TIMES on the Home View without clicking elsewhere,
         // and then confirming the action in a popup dialog.
         resetAIM = function () {
-            // user wants to reset
-            projects = new projModel.ProjectCollection();
-            chapters = new chapterModel.ChapterCollection();
-            sourcephrases = new spModel.SourcePhraseCollection();
-            targetunits = new kbmodel.TargetUnitCollection();
-            books = new bookModel.BookCollection();
-            bookmarks = new userModel.BookmarkCollection();
-            users = new userModel.UserCollection();
             // clear all documents
-            sourcephrases.clearAll();
-            chapters.clearAll();
-            books.clearAll();
+            window.Application.spList.clearAll();
+            window.Application.spList.reset();
+            window.Application.ChapterList.clearAll();
+            window.Application.ChapterList.reset();
+            window.Application.BookList.clearAll();
+            window.Application.BookList.reset();
             // clear KB
-            targetunits.clearAll();
+            window.Application.kbList.clearAll();
+            window.Application.kbList.reset();
             // clear all project data
             localStorage.removeItem("CurrentProjectID");
             window.Application.currentProject = null;
             window.Application.currentBookmark = null;
-            bookmarks.clearAll();
-            users.clearAll();
-            projects.clearAll();
-            // refresh the view
-            window.Application.ProjectList.fetch({reset: true, data: {name: ""}});
-            Backbone.history.loadUrl(Backbone.history.fragment);
+            window.Application.currentProject = null;
+            // clear out the bookmarks
+            window.Application.bookmarkList.clearAll();
+            window.Application.bookmarkList.reset();
+            var bookmarks = window.Application.user.get("bookmarks");
+            bookmarks.length = 0;
+            window.Application.user.set("bookmarks", bookmarks)
+            window.Application.currentBookmark = null;
+            // refresh the view once we've cleared out the project
+            window.Application.ProjectList.clearAll().then(function() {
+                // window.Application.ProjectList.fetch({reset: true, data: {name: ""}})
+                Backbone.history.loadUrl(Backbone.history.fragment);
+            });
         },
 
         // UILanguageView

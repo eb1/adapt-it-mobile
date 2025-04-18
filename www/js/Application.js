@@ -429,18 +429,25 @@ define(function (require) {
                     // set our current bookmark to that one
                     window.Application.bookmarkList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}).then(function () {
                         console.log("setBookmarks() - bookmark list retrieved, length: " + window.Application.bookmarkList.length);
-                        for(var i=0; i<window.Application.ProjectList.length; i++) {
-                            if (window.Application.user.get("bookmarks").indexOf(window.Application.ProjectList.at(i).get("bookmarkid")) > -1) {
-                                console.log("setBookmarks() - found matching bookmark, setting");
-                                window.Application.currentBookmark = model;
-                                deferred.resolve();
-                                return;
+                        var projid = window.Application.currentProject.get("projectid");
+                        for(var i=0; i<window.Application.bookmarkList.length; i++) {
+                            if (window.Application.bookmarkList.at(i).get("projectid") === projid) {
+                                // this bookmark refers to the current project. Is it in our user's bookmarks array?
+                                if (window.Application.user.get("bookmarks").indexOf(window.Application.bookmarkList.at(i).get("bookmarkid")) > -1) {
+                                    // yes -- this is the bookmarkid we want
+                                    console.log("setBookmarks() - found matching bookmark, setting");
+                                    window.Application.currentBookmark = window.Application.bookmarkList.at(i);
+                                    deferred.resolve();
+                                    return;
+                                }
                             }
                         }
-                        // if we got here, we didn't find a valid bookmark. TDB - error?
-                        console.log("setBookmarks() - didn't find a matching bookmark, setting to the first in the list");
-                        window.Application.currentBookmark = window.Application.bookmarkList.at(0);
-                        deferred.resolve();    
+                        // Sanity check for a valid bookmark
+                        if (window.Application.currentBookmark === null) {
+                            console.log("setBookmarks() - didn't find a matching bookmark, setting to the first in the list");
+                            window.Application.currentBookmark = window.Application.bookmarkList.at(0);
+                            deferred.resolve();    
+                        }
                     });
                 }
 

@@ -188,8 +188,12 @@ define(function (require) {
             // Removes all chapters from the collection (and database)
             clearAll: function () {
                 window.Application.db.transaction(function (tx) {
-                    tx.executeSql('DELETE from book;'); // clear out the table
-                    books.length = 0; // delete local copy
+                    tx.executeSql('DELETE from book;', [], function (tx, res) {
+                        console.log("book DELETE (all) ok.");
+                        books.length = 0;
+                    }, function (tx, err) {
+                        console.log("book DELETE (all) error: " + err.message);
+                    });
                 }, function (err) {
                     console.log("DELETE error: " + err.message);
                 });

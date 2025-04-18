@@ -373,8 +373,12 @@ define(function (require) {
         // Removes all bookmarks from the collection (and database)
         clearAll: function () {
             window.Application.db.transaction(function (tx) {
-                tx.executeSql('DELETE from bookmark;'); // clear out the table
-                bookmarks.length = 0; // delete local copy
+                tx.executeSql('DELETE from bookmark;', [], function (tx, res) {
+                    console.log("bookmark DELETE (all) ok.");
+                    bookmarks.length = 0;
+                }, function (tx, err) {
+                    console.log("bookmark DELETE (all) error: " + err.message);
+                });
             }, function (err) {
                 console.log("DELETE error: " + err.message);
             });
