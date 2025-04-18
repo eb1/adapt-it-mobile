@@ -664,8 +664,8 @@ define(function (require) {
             importBooks: function (id) {
                 console.log("importBooks");
                 // update the book and chapter lists, then show the import docs view
-                $.when(window.Application.BookList.fetch({reset: true, data: {name: ""}})).done(function () {
-                    $.when(window.Application.ChapterList.fetch({reset: true, data: {name: ""}})).done(function () {
+                $.when(window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}})).done(function () {
+                    $.when(window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}})).done(function () {
                         var proj = window.Application.currentProject;
                         if (proj !== null) {
                             importDocView = new DocumentViews.ImportDocumentView({model: proj});
@@ -693,13 +693,17 @@ define(function (require) {
             // Search / browse chapter view -- all books/chapters in current project
             lookupChapter: function (id) {
                 console.log("lookupChapter");
-                var proj = window.Application.ProjectList.where({projectid: id});
-                if (proj !== null) {
-                    lookupView = new SearchViews.LookupView({model: proj[0]});
-                    window.Application.main.show(lookupView);
-                } else {
-                    console.log("no project defined");
-                }
+                $.when(window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}})).done(function () {
+                    $.when(window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}})).done(function () {
+                        var proj = window.Application.currentProject;
+                        if (proj !== null) {
+                            lookupView = new SearchViews.LookupView({model: proj});
+                            window.Application.main.show(lookupView);
+                        } else {
+                            alert("No current project defined -- ignoring open() call");
+                        }
+                    });
+                });
             },
             // Adapt View (the reason we're here)
             adaptChapter: function (id) {

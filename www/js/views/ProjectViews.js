@@ -985,8 +985,8 @@ define(function (require) {
 
                     // done setting the project and bookmark list -- head back to the home page
                     if (window.history.length > 1) {
-                        // there actually is a history -- go back
-                        window.history.back();
+                        // jump back 2 to the home page
+                        window.history.go(-2);
                     } else {
                         // no history (import link from outside app) -- just go home
                         window.location.replace("");
@@ -1914,11 +1914,14 @@ define(function (require) {
                         step++;
                         this.ShowStep(step);
                     } else {
+                        var bMultipleProject = false;
                         // last step -- finish up
                         // save the model
                         this.model.save();
                         if (window.Application.currentProject) {
-                            // There's already a project defined. Clear out any local 
+                            // There's already a project defined.
+                            bMultipleProject = true;
+                            // Clear out any local 
                             // chapter/book/sourcephrase/KB stuff so it loads from our new project instead
                             window.Application.BookList.length = 0;
                             window.Application.ChapterList.length = 0;
@@ -1931,7 +1934,11 @@ define(function (require) {
                         window.Application.currentBookmark = this.bookmark;
                         localStorage.setItem("CurrentProjectID", window.Application.currentProject.get("projectid"));
                         // head back to the home page
-                        window.history.back(); // return to the home page
+                        if (bMultipleProject === true) {
+                            window.history.go(-3); // back 3 jumps to the home page 
+                        } else {
+                            window.history.back(); // back 1 jump to the home page
+                        }
                     }
                 }
             },
