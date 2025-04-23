@@ -22,7 +22,7 @@
         <hook src="scripts/before-build.js" type="before_build" />
         <plugin name="cordova-sqlite-evcore-extbuild-free" spec="^0.15.1" />
         <preference name="android-minSdkVersion" value="26" />
-        <preference name="android-targetSdkVersion" value="34" />
+        <preference name="android-targetSdkVersion" value="35" />
         <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/res/svg/ic_aim_adaptive_splash.xml" />
         <preference name="AndroidWindowSplashScreenIconBackgroundColor" value="#279ED8" />
         <preference name="CustomURLSchemePluginClearsAndroidIntent" value="true" />
@@ -30,6 +30,7 @@
         <preference name="AndroidLaunchMode" value="singleTask" />
         <preference name="AndroidExtraFilesystems" value="files,files-external,documents,sdcard,root" />
         <preference name="AndroidPersistentFileLocation" value="Internal" />
+        <preference name="AndroidEdgeToEdge" value="true" />
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:largeHeap="true" />
         </edit-config>

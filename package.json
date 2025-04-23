@@ -17,7 +17,7 @@
     "adaptation"
   ],
   "devDependencies": {
-    "cordova-android": "^13.0.0",
+    "cordova-android": "^14.0.0",
     "cordova-clipboard": "github:ihadeed/cordova-clipboard",
     "cordova-ios": "^7.1.1",
     "cordova-plugin-add-swift-support": "^2.0.2",
@@ -91,8 +91,8 @@
       "cordova-sqlite-evcore-extbuild-free": {}
     },
     "platforms": [
-      "android",
-      "ios"
+      "ios",
+      "android"
     ]
   }
 }
