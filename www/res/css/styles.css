@@ -1134,6 +1134,11 @@ ul {
     background-color: #2595cb; 
     border: 1px solid transparent;
 }
+.topcoat-td {
+    color: hsl(0, 0%, 0%);
+    font-weight: 1000; /*boldest*/
+    font-size: 19px; /*normal is 16px*/
+}
 
 .combo {
     border-bottom: none;
