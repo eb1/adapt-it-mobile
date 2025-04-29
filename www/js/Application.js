@@ -81,8 +81,8 @@ define(function (require) {
             currentBookmark: null,
             user: null,
             localURLs: [],
-            version: "1.17.3", // appended with Android / iOS build info
-            AndroidBuild: "62", // (was milestone release #)
+            version: "1.18.0", // appended with Android / iOS build info
+            AndroidBuild: "63", // (was milestone release #)
             iOSBuild: "1", // iOS uploaded build number for this release (increments from 1 for each release) 
             importingURL: "", // for other apps in Android-land sending us files to import
 
@@ -429,16 +429,43 @@ define(function (require) {
                     // set our current bookmark to that one
                     window.Application.bookmarkList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}}).then(function () {
                         console.log("setBookmarks() - bookmark list retrieved, length: " + window.Application.bookmarkList.length);
-                        var projid = window.Application.currentProject.get("projectid");
-                        for(var i=0; i<window.Application.bookmarkList.length; i++) {
-                            if (window.Application.bookmarkList.at(i).get("projectid") === projid) {
-                                // this bookmark refers to the current project. Is it in our user's bookmarks array?
-                                if (window.Application.user.get("bookmarks").indexOf(window.Application.bookmarkList.at(i).get("bookmarkid")) > -1) {
-                                    // yes -- this is the bookmarkid we want
-                                    console.log("setBookmarks() - found matching bookmark, setting");
-                                    window.Application.currentBookmark = window.Application.bookmarkList.at(i);
-                                    deferred.resolve();
-                                    return;
+                        if (window.Application.bookmarkList.length === 0) {
+                            // Ugh. No bookmarks retrieved, but the user has some defined. 
+                            // Create one for this projectid and use it for the currentBookmark (and add it to the user array)
+                            var bookmarks = window.Application.user.get("bookmarks"); // s/b empty array of bookmarkids, not collection
+                            var proj = window.Application.currentProject;
+                            var bookmarkid = window.Application.generateUUID();
+                            var newBookmark = new userModels.Bookmark({
+                                bookmarkid: bookmarkid,
+                                projectid: proj.get('projectid'),
+                                name: (proj.get('lastAdaptedName').length > 0) ? proj.get('lastAdaptedName') : "",
+                                bookid: (proj.get('lastAdaptedBookID').length > 0) ? proj.get('lastAdaptedBookID') : "",
+                                chapterid: (proj.get('lastAdaptedChapterID').length > 0) ? proj.get('lastAdaptedChapterID') : "",
+                                spid: (proj.get('lastAdaptedSPID').length > 0) ? proj.get('lastAdaptedSPID') : ""
+                            });
+                            // save and add to the collection
+                            newBookmark.save();
+                            // set this bookmark as the current bookmark
+                            console.log("setBookmarks() - no bookmarks found(!). Created new bookmark: " + bookmarkid + " for projectid: " + proj.get('projectid'));
+                            window.Application.currentBookmark = newBookmark;
+                            window.Application.bookmarkList.add(newBookmark);
+                            // add this to the user's bookmarkid array
+                            bookmarks.push(bookmarkid);
+                            window.Application.user.set("bookmarks", bookmarks);
+                            window.Application.user.save();
+                        } else {
+                            // At least one bookmark retrieved. See if it lines up with the projectid and user bookmark array
+                            var projid = window.Application.currentProject.get("projectid");
+                            for(var i=0; i<window.Application.bookmarkList.length; i++) {
+                                if (window.Application.bookmarkList.at(i).get("projectid") === projid) {
+                                    // this bookmark refers to the current project. Is it in our user's bookmarks array?
+                                    if (window.Application.user.get("bookmarks").indexOf(window.Application.bookmarkList.at(i).get("bookmarkid")) > -1) {
+                                        // yes -- this is the bookmarkid we want
+                                        console.log("setBookmarks() - found matching bookmark, setting");
+                                        window.Application.currentBookmark = window.Application.bookmarkList.at(i);
+                                        deferred.resolve();
+                                        return;
+                                    }
                                 }
                             }
                         }

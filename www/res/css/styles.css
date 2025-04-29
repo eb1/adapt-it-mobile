@@ -245,6 +245,11 @@ input[type="file"] {
 }
 .main_title {
     overflow: hidden;
+    padding-left: max(env(safe-area-inset-left), 0);
+    padding-right: env(safe-area-inset-right);
+    padding-top: 25px;                           /* fallback */
+    padding-top: constant(safe-area-inset-top);  /* iOS < 11.2 and older Android */
+    padding-top: max(env(safe-area-inset-top), 20px); /* iOS 11.2+ and newer Android */
     position: absolute;
     text-overflow: ellipsis;
     width:100%;
@@ -358,11 +363,14 @@ header h3 {
     flex-flow: row wrap;
     justify-content: flex-end;
     position: absolute;
-    top: 57px;
+    top: 108px;
+    top: max(calc(env(safe-area-inset-top) + 57px), 108px);    
     height: 82px;
     left: 0;
+    left: max(calc(env(safe-area-inset-left)), 0);
     padding: 0px 1px;
     right: 0;
+    right: max(calc(env(safe-area-inset-right)), 0);
 }
 .ft-bar {
     justify-content: flex-end;
@@ -378,7 +386,8 @@ header h3 {
     flex-direction: row;
     justify-content: flex-end;
     position: absolute;
-    top: 57px;
+    top: 77px;
+    top: max(calc(env(safe-area-inset-top) + 57px), 77px);
     height: 32px;
     left: 0;
     padding: 0px 1px;
@@ -486,17 +495,21 @@ button.light-grey {
 .scroller {
     border-top: 1px solid #aaa;
     bottom: 0;
+    bottom: max(calc(env(safe-area-inset-bottom)), 0);
     left: 0;
     overflow: auto;
     position: fixed;
     right: 0;
     top: 57px;
+    top: max(calc(env(safe-area-inset-top) + 57px), 77px);
 }
 .with-search {
-    top: 90px;
+    top: 109px;
+    top: max(calc(env(safe-area-inset-top) + 85px), 109px);
 }
 .with-ft {
-    top: 140px;
+    top: 179px;
+    top: max(calc(env(safe-area-inset-top) + 135px), 179px);
 }
 /* most pages - top title bar, no toolbar */
 .scroller-notb {
@@ -505,16 +518,19 @@ button.light-grey {
     overflow: auto;
     position: fixed;
     right: 0;
-    top: 57px;
+    top: 77px;
+    top: max(calc(env(safe-area-inset-top) + 57px), 77px);
 }
 /* wizard page scrolling content - leave room for ok / cancel / progress bar */
 .scroller-bottom-tb {
     bottom: 61px;
+    bottom: max(calc(env(safe-area-inset-bottom) + 61px), 61px);
     left: 0;
     overflow: auto;
     position: fixed;
     right: 0;
     top: 57px;
+    top: max(calc(env(safe-area-inset-top) + 57px), 77px);
 }
 .bottom-tb {
     background: #eee;
@@ -556,6 +572,12 @@ button.light-grey {
 .fixfixed .actions-dropdown,
 .fixfixed .main_title {
     position:absolute;
+}
+.scroller-tb {
+    left: 0;
+    right: 0;
+    top: 58px;
+    top: max(calc(env(safe-area-inset-top) + 58px), 78px);
 }
 #pb-bg {
     background-color: #ccc;
@@ -1112,6 +1134,11 @@ ul {
     background-color: #2595cb; 
     border: 1px solid transparent;
 }
+.topcoat-td {
+    color: hsl(0, 0%, 0%);
+    font-weight: 1000; /*boldest*/
+    font-size: 19px; /*normal is 16px*/
+}
 
 .combo {
     border-bottom: none;
@@ -1369,8 +1396,8 @@ div.preview div.pile {
 }
 .subtext {
     display: block;
-    font-size: 0.6rem;
-    color: #555;
+    font-size: 0.9rem;
+    color: #55c;
 }
 .topcoat-checkbox__checkmark {
     margin-right: 6px;

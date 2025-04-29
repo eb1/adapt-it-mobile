@@ -416,7 +416,7 @@ define(function (require) {
                                     // not the current schema -- upgrade the DB as appropriate
                                     upgradeSchema(schemaVer);
                                 } else {
-                                    console.log("checkSchema: running on latest DB schema");
+                                    console.log("checkSchema: running on latest DB schema: " + schemaVer);
                                 }
                             });
                         });

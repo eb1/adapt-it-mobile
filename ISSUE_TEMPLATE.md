@@ -2,7 +2,7 @@ Adapt It Mobile Version:
 
 Operating System: [iOS][Android][Windows]
 
-OS Version: [e.g., Android 4.3] 
+OS Version: [e.g., Android 8.1] 
 
 Severity: [1-highest -- 5-lowest]
 
