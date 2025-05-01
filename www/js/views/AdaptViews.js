@@ -96,7 +96,7 @@ define(function (require) {
         // This method also takes into account the software / on-screen keyboard
         scrollToView = function (element) {
             // viewport dimensions
-            var docViewTop = $("#content").scrollTop();
+            var docViewTop = $("#content").scrollTop(); //px
             var docViewHeight = document.documentElement.clientHeight - $("#title").outerHeight(); // height of #content element
             var docViewBottom = 0; // viewport area to work with -- calculated below
             // element dimensions
@@ -134,7 +134,8 @@ define(function (require) {
             console.log("- eltBottom: " + eltBottom + ", docViewHeight: " + docViewHeight + ", docViewBottom: " + docViewBottom);
             console.log("- eltTop: " + eltTop + ", docViewTop: " + docViewTop);
             // now check to see if the content needs scrolling
-            if ((eltBottom > docViewBottom) || (eltTop < docViewTop)) {
+            if ((eltBottom > docViewBottom) || (eltTop < docViewTop) ||
+                (device.platform === "Android")) {
                  // Not in view -- scroll to the element
                 if (($(element).height() * 2) < docViewHeight) {
                     // more than 2 rows available in viewport -- center it
