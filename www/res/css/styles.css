@@ -495,7 +495,6 @@ button.light-grey {
 .scroller {
     border-top: 1px solid #aaa;
     bottom: 0;
-    bottom: max(calc(env(safe-area-inset-bottom)), 0);
     left: 0;
     overflow: auto;
     position: fixed;

@@ -1244,18 +1244,39 @@ define(function (require) {
                     console.log("SearchViews:onShow() - need to refresh the chapter list");
                     window.Application.ChapterList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
                 }
-                this.bookList = window.Application.BookList;
-                this.chapterList = window.Application.ChapterList;
-                // initial sort - name
-                this.bookList.comparator = 'name';
-                this.bookList.sort();
-                this.bookList.each(function (model, index) {
-                    lstBooks += "<li class=\"topcoat-list__item ttlbook\" id=\"ttl-" + model.get("bookid")  + "\"><div class=\"big-link\" id=\"bk-" + model.get("bookid") + "\"><span class=\"li-chk\"></span><span class=\"btn-book\"></span>" + model.get("name") + "</div></li><ul class=\"topcoat-list__container chapter-list cl-indent\" id=\"lst-" + model.get("bookid") + "\" style=\"display:none\"></ul>";
-                });
-                $("#lstBooks").html(lstBooks);
-                // if there's only one book, "open" it and show the chapters
-                if (this.bookList.length === 1) {
-                    $("#lstBooks > h3").first().mouseup();
+                if (window.Application.BookList.length === 0) {
+                    // booklist is empty; this shouldn't be the case, but can happen if the local copy is out of sync
+                    // we need to call fetch() to pull the latest data, and then update the UI when the fetch call completes
+                    console.log("SearchViews:onShow() - need to refresh book list");
+                    $.when(window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}})).done(function () {
+                        var bookList = window.Application.BookList;
+                        bookList.comparator = 'name';
+                        bookList.sort();
+                        bookList.each(function (model, index) {
+                            lstBooks += "<li class=\"topcoat-list__item ttlbook\" id=\"ttl-" + model.get("bookid")  + "\"><div class=\"big-link\" id=\"bk-" + model.get("bookid") + "\"><span class=\"li-chk\"></span><span class=\"btn-book\"></span>" + model.get("name") + "</div></li><ul class=\"topcoat-list__container chapter-list cl-indent\" id=\"lst-" + model.get("bookid") + "\" style=\"display:none\"></ul>";
+                        });
+                        $("#lstBooks").html(lstBooks);
+                        // if there's only one book, "open" it and show the chapters
+                        if (bookList.length === 1) {
+                            $("#lstBooks > h3").first().mouseup();
+                        }    
+    
+                    });
+                } else {
+                    // book list is populated - update the UI
+                    this.bookList = window.Application.BookList;
+                    this.chapterList = window.Application.ChapterList;
+                    // initial sort - name
+                    this.bookList.comparator = 'name';
+                    this.bookList.sort();
+                    this.bookList.each(function (model, index) {
+                        lstBooks += "<li class=\"topcoat-list__item ttlbook\" id=\"ttl-" + model.get("bookid")  + "\"><div class=\"big-link\" id=\"bk-" + model.get("bookid") + "\"><span class=\"li-chk\"></span><span class=\"btn-book\"></span>" + model.get("name") + "</div></li><ul class=\"topcoat-list__container chapter-list cl-indent\" id=\"lst-" + model.get("bookid") + "\" style=\"display:none\"></ul>";
+                    });
+                    $("#lstBooks").html(lstBooks);
+                    // if there's only one book, "open" it and show the chapters
+                    if (this.bookList.length === 1) {
+                        $("#lstBooks > h3").first().mouseup();
+                    }    
                 }
             },
             
