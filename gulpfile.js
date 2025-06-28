@@ -33,7 +33,7 @@ function minify_js() {
 
 // Restore the original JS files from backup
 function restore_js() {
-    log('Restoring js files from ' + paths.js_bak + '\n');
+    log('** Restoring js files from ' + paths.js_bak + '\n');
     return del.deleteAsync([paths.js_dest]).then(() => {
         return src(paths.js_bak + '/**/*').pipe(dest(paths.js_dest));
     });
@@ -41,7 +41,7 @@ function restore_js() {
 
 // Clean up the backup folder
 function clean_backup() {
-    log('Cleaning backup files\n');
+    log('** Cleaning backup files\n');
     return del.deleteAsync([paths.js_bak]);
 };
 
@@ -67,6 +67,11 @@ function prep_ios_dir (done) {
         log('cleaning platform ios\n');
         var cmd = cp.spawn('cordova', ["clean", "ios"], {stdio: 'inherit'}).on('exit', done);
     }
+};
+
+function buildIt (platform, done) {
+    log('** Building for ' + platform + '\n');
+    var cmd = cp.spawn('cordova', ["build", platform, "--release", "--verbose", "--buildConfig=build.json"], {stdio: 'inherit'}).on('exit', done);
 };
 
 function buildAndRestore (platform, done) {
@@ -108,12 +113,12 @@ function copyAndroidArtifact() {
 
 // --- Main Build Tasks ---
 function build_ios(done) {
-    buildAndRestore('ios');
+    buildIt('ios');
     done();
 };
 
 function build_android(done) {
-    buildAndRestore('android');
+    buildIt('android');
     done();
 }
 
