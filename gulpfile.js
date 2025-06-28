@@ -34,7 +34,7 @@ function minify_js() {
 // Restore the original JS files from backup
 function restore_js() {
     log('Restoring js files from ' + paths.js_bak + '\n');
-    return del([paths.js_dest]).then(() => {
+    return del.deleteAsync([paths.js_dest]).then(() => {
         return src(paths.js_bak + '/**/*').pipe(dest(paths.js_dest));
     });
 };
@@ -42,7 +42,7 @@ function restore_js() {
 // Clean up the backup folder
 function clean_backup() {
     log('Cleaning backup files\n');
-    return del([paths.js_bak]);
+    return del.deleteAsync([paths.js_bak]);
 };
 
 // prep the Android platform -- either add it or clean it
@@ -84,7 +84,7 @@ function buildAndRestore (platform, done) {
         cordova.build(options, cb);
     };
 
-    const restoreTasks = series(restore_js, clean_backup);
+    // const restoreTasks = series(restore_js, clean_backup);
 
     // Wrap cordova build in a promise to handle success and failure
     new Promise((resolve, reject) => {
@@ -94,12 +94,10 @@ function buildAndRestore (platform, done) {
         });
     }).then(() => {
         console.log(`Cordova build for ${platform} succeeded. Restoring JS files.`);
-        restoreTasks(done);
+        done();
     }).catch((err) => {
         console.error(`Cordova build for ${platform} failed, but restoring JS files.`);
-        restoreTasks(() => {
-            done(err); // Signal gulp that the task failed
-        });
+        done(err); // Signal gulp that the task failed
     });
 };
 
@@ -125,13 +123,17 @@ exports.build = series(
     backup_js,
     minify_js,
     parallel(build_android, build_ios),
+    restore_js,
+    clean_backup,
     copyAndroidArtifact
 );
 exports.ios = series(
     prep_ios_dir,
     backup_js,
     minify_js,
-    build_ios
+    build_ios,
+    restore_js,
+    clean_backup,
 );
 // default - just Android
 exports.android = series(
@@ -139,6 +141,8 @@ exports.android = series(
     backup_js,
     minify_js,
     build_android, 
+    restore_js,
+    clean_backup,
     copyAndroidArtifact
 ); // also called by CI build
 exports.default = this.android;
