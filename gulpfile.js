@@ -20,29 +20,28 @@ const paths = {
 // --- Minification Tasks ---
 
 // Backup the original JS files to a temporary directory
-function backup_js() {
+function backup_js() { // stream
     log('Backing up js files to ' + paths.js_bak + '\n');
     return src(paths.js_src).pipe(dest(paths.js_bak));
 };
 
 // Minify JS files in place for the build
-function minify_js() {
+function minify_js() { // stream
     log('Calling terser on js files\n');
     return src(paths.js_src_files).pipe(terser()).pipe(dest(paths.js_dest));
 };
 
 // Restore the original JS files from backup
-function restore_js() {
+async function restore_js() {
     log('** Restoring js files from ' + paths.js_bak + '\n');
-    return del.deleteAsync([paths.js_dest]).then(() => {
-        return src(paths.js_bak + '/**/*').pipe(dest(paths.js_dest));
-    });
+    await del.deleteAsync([paths.js_dest]);
+    return src(paths.js_bak + '/**/*').pipe(dest(paths.js_dest));
 };
 
 // Clean up the backup folder
-function clean_backup() {
+async function clean_backup() {
     log('** Cleaning backup files\n');
-    return del.deleteAsync([paths.js_bak]);
+    await del.deleteAsync([paths.js_bak]);
 };
 
 // prep the Android platform -- either add it or clean it
@@ -74,24 +73,14 @@ function prep_ios_dir (done) {
 // Cordova call
 function do_build (platform, target, cb) {
     log('** Building for ' + platform + '\n');
-    const cordovaBuild = (cb) => {
-        let options = { platforms: [platform] };
-        if (platform === 'android') {
-            options.options = {
-                argv: [target, "--verbose", "--buildConfig=build.json", "--gradleArg=--no-daemon"]
-            };
-        } else if (platform === 'ios') {
-            options.options = {
-                argv: [target, "--verbose", "--buildConfig=build.json", "--device"]
-            };
-        }
-        cordova.build(options, cb);
-    };
+    var options = [];
+    if (platform === 'android') {
+        options = ['build', platform, target, "--verbose", "--buildConfig=build.json", "--gradleArg=--no-daemon"];
+    } else if (platform === 'ios') {
+        options = ['build', platform, target, "--verbose", "--buildConfig=build.json", "--device"];
+    }
+    var cmd = cp.spawn('cordova', options, {stdio: 'inherit'}).on('exit', cb);
 
-    cordovaBuild((err) => {
-        if (err) return cb(err);
-        cb();
-    });
 };
 
 // copy over release .apk
@@ -101,18 +90,15 @@ function copyAndroidArtifact() {
 };
 
 function build_ios(done) {
-    do_build('ios', '--release');
-    done();
+    do_build('ios', '--release', done);
 };
 
 function build_android(done) {
-    do_build('android', '--release');
-    done();
-}
+    do_build('android', '--release', done);
+};
 
 function build_android_debug(done) {
-    do_build('android', '--debug');
-    done();
+    do_build('android', '--debug', done);
 }
 
 // --- Exported API / Visible to command line ---
