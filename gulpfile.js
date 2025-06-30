@@ -1,7 +1,7 @@
 // Gulpfile for Adapt It Mobile builds
 var fs = require("fs"),
     path = require("path"),
-    cp = require('child_process'),
+    cp = require('node:child_process'),
     terser = require("gulp-terser"),
     del = require("del"),
     log = require("fancy-log"),
@@ -69,58 +69,53 @@ function prep_ios_dir (done) {
     }
 };
 
-function buildIt (platform, done) {
-    log('** Building for ' + platform + '\n');
-    var cmd = cp.spawn('cordova', ["build", platform, "--release", "--verbose", "--buildConfig=build.json"], {stdio: 'inherit'}).on('exit', done);
-};
+// --- Main Build Tasks ---
 
-function buildAndRestore (platform, done) {
+// Cordova call
+function do_build (platform, target, cb) {
+    log('** Building for ' + platform + '\n');
     const cordovaBuild = (cb) => {
         let options = { platforms: [platform] };
         if (platform === 'android') {
             options.options = {
-                argv: ["--release", "--verbose", "--buildConfig=build.json", "--gradleArg=--no-daemon"]
+                argv: [target, "--verbose", "--buildConfig=build.json", "--gradleArg=--no-daemon"]
             };
         } else if (platform === 'ios') {
             options.options = {
-                argv: ["--release", "--verbose", "--buildConfig=build.json", "--device"]
+                argv: [target, "--verbose", "--buildConfig=build.json", "--device"]
             };
         }
         cordova.build(options, cb);
     };
 
-    // const restoreTasks = series(restore_js, clean_backup);
-
-    // Wrap cordova build in a promise to handle success and failure
-    new Promise((resolve, reject) => {
-        cordovaBuild((err) => {
-            if (err) return reject(err);
-            resolve();
-        });
-    }).then(() => {
-        console.log(`Cordova build for ${platform} succeeded. Restoring JS files.`);
-        done();
-    }).catch((err) => {
-        console.error(`Cordova build for ${platform} failed, but restoring JS files.`);
-        done(err); // Signal gulp that the task failed
+    cordovaBuild((err) => {
+        if (err) return cb(err);
+        cb();
     });
 };
 
+// copy over release .apk
 function copyAndroidArtifact() {
     // Copy results to bin folder
     return src("platforms/android/app/build/outputs/apk/release/*.apk").pipe(dest("bin/release/android"));
 };
 
-// --- Main Build Tasks ---
 function build_ios(done) {
-    buildIt('ios');
+    do_build('ios', '--release');
     done();
 };
 
 function build_android(done) {
-    buildIt('android');
+    do_build('android', '--release');
     done();
 }
+
+function build_android_debug(done) {
+    do_build('android', '--debug');
+    done();
+}
+
+// --- Exported API / Visible to command line ---
 
 // build both Android and iOS
 exports.build = series(
@@ -132,6 +127,7 @@ exports.build = series(
     clean_backup,
     copyAndroidArtifact
 );
+// ios (release)
 exports.ios = series(
     prep_ios_dir,
     backup_js,
@@ -140,7 +136,7 @@ exports.ios = series(
     restore_js,
     clean_backup,
 );
-// default - just Android
+// Android (release)
 exports.android = series(
     prep_android_dir,
     backup_js,
@@ -149,5 +145,16 @@ exports.android = series(
     restore_js,
     clean_backup,
     copyAndroidArtifact
-); // also called by CI build
-exports.default = this.android;
+);
+// CI build (Android debug)
+exports.ci_build = series(
+    prep_android_dir,
+    backup_js,
+    minify_js,
+    build_android_debug, 
+    restore_js,
+    clean_backup,
+    copyAndroidArtifact
+);
+// default (gulp / no args) is CI build
+exports.default = this.ci_build;
