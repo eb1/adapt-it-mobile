@@ -20,10 +20,10 @@ jobs:
     # fs-extra dependency requires node v10+
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [22.x]
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4.2.2
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
@@ -43,7 +43,7 @@ jobs:
       with:
         gradle-version: 7.6
     - name: Dbg cordova build
-      run: gulp
+      run: gulp ci-build
         
       env:
         CI: true
