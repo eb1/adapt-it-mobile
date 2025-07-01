@@ -75,12 +75,15 @@ function do_build (platform, target, cb) {
     log('** Building for ' + platform + '\n');
     var options = [];
     if (platform === 'android') {
-        options = ['build', platform, target, "--verbose", "--buildConfig=build.json", "--gradleArg=--no-daemon"];
+        options = ['build', platform, target, "--verbose", "--gradleArg=--no-daemon"];
     } else if (platform === 'ios') {
-        options = ['build', platform, target, "--verbose", "--buildConfig=build.json", "--device"];
+        options = ['build', platform, target, "--verbose", "--device"];
+    }
+    if (target === '--release') {
+        // don't look at the keystore (i.e., don't sign) in debug mode
+        options.push("--buildConfig=build.json");
     }
     var cmd = cp.spawn('cordova', options, {stdio: 'inherit'}).on('exit', cb);
-
 };
 
 // copy over release .apk
