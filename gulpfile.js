@@ -44,6 +44,15 @@ async function clean_backup() {
     await del.deleteAsync([paths.js_bak]);
 };
 
+// add the android cert if needed
+function check_cert_dir (done) {
+    var path = "./temp";
+    if (!fs.existsSync(path)) {
+        fs.mkdirSync(path);
+    };
+    done();
+};
+
 // prep the Android platform -- either add it or clean it
 function prep_android_dir (done) {
     var path = "./platforms/android";
@@ -69,20 +78,16 @@ function prep_ios_dir (done) {
 };
 
 // --- Main Build Tasks ---
-
 // Cordova call
 function do_build (platform, target, cb) {
-    log('** Building for ' + platform + '\n');
     var options = [];
     if (platform === 'android') {
-        options = ['build', platform, target, "--verbose", "--gradleArg=--no-daemon"];
+        options = ['build', platform, target, "--keystore=./temp/aim.keystore", "--storePassword=" + process.env.SIGNING_STORE_PASSWORD, "--alias=" + process.env.SIGNING_KEY_ALIAS, "--password=" + process.env.SIGNING_KEY_PASSWORD, "--gradleArg=--no-daemon"];
     } else if (platform === 'ios') {
-        options = ['build', platform, target, "--verbose", "--device"];
+        options = ['build', platform, target, "--verbose", "--buildConfig=build.json", "--device"];
     }
-    if (target === '--release') {
-        // don't look at the keystore (i.e., don't sign) in debug mode
-        options.push("--buildConfig=build.json");
-    }
+    //log('** cordova build: ' + options + '\n');
+
     var cmd = cp.spawn('cordova', options, {stdio: 'inherit'}).on('exit', cb);
 };
 
