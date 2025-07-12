@@ -1,63 +1,154 @@
 // Gulpfile for Adapt It Mobile builds
-var gulp = require("gulp"),
-    fs = require("fs"),
-    cp = require('child_process'),
+var fs = require("fs"),
+    path = require("path"),
+    cp = require('node:child_process'),
+    terser = require("gulp-terser"),
+    del = require("del"),
+    log = require("fancy-log"),
     cordova = require("cordova-lib").cordova;
 
+const { series, parallel } = require('gulp');
+const { src, dest } = require('gulp');
+
+const paths = {
+    js_src: './www/js/**/*',
+    js_src_files: './www/js/***/*.js',
+    js_dest: './www/js',
+    js_bak: './www_js_bak'
+};
+
+// --- Minification Tasks ---
+
+// Backup the original JS files to a temporary directory
+function backup_js() { // stream
+    log('Backing up js files to ' + paths.js_bak + '\n');
+    return src(paths.js_src).pipe(dest(paths.js_bak));
+};
+
+// Minify JS files in place for the build
+function minify_js() { // stream
+    log('Calling terser on js files\n');
+    return src(paths.js_src_files).pipe(terser()).pipe(dest(paths.js_dest));
+};
+
+// Restore the original JS files from backup
+async function restore_js() {
+    log('** Restoring js files from ' + paths.js_bak + '\n');
+    await del.deleteAsync([paths.js_dest]);
+    return src(paths.js_bak + '/**/*').pipe(dest(paths.js_dest));
+};
+
+// Clean up the backup folder
+async function clean_backup() {
+    log('** Cleaning backup files\n');
+    await del.deleteAsync([paths.js_bak]);
+};
+
+// add the android cert if needed
+function check_cert_dir (done) {
+    var path = "./temp";
+    if (!fs.existsSync(path)) {
+        fs.mkdirSync(path);
+    };
+    done();
+};
+
 // prep the Android platform -- either add it or clean it
-gulp.task("prep-android-dir", function (done) {
+function prep_android_dir (done) {
     var path = "./platforms/android";
     if (!fs.existsSync(path)) {
-        process.stdout.write('Android dir not detected -- creating platform android\n');
+        log('Android dir not detected -- creating platform android\n');
         var cmd = cp.spawn('cordova', ["platform", "add", "android"], {stdio: 'inherit'}).on('exit', done);
     } else {
-        process.stdout.write('cleaning platform android\n');
+        log('cleaning platform android\n');
         var cmd = cp.spawn('cordova', ["clean", "android"], {stdio: 'inherit'}).on('exit', done);
     }
-});
-
-// build Android
-gulp.task("build-android", function (done) {
-    cordova.build({
-        "platforms": ["android"],
-        "options": {
-            argv: ["--release", "--verbose", "--buildConfig=build.json", "--gradleArg=--no-daemon"]
-        }
-    }, done());
-});
+};
 
 // prep the iOS platform -- either add it or clean it
-gulp.task("prep-ios-dir", function (done) {
+function prep_ios_dir (done) {
     var path = "./platforms/ios";
     if (!fs.existsSync(path)) {
-        process.stdout.write('ios dir not detected -- creating platform ios\n');
+        log('ios dir not detected -- creating platform ios\n');
         var cmd = cp.spawn('cordova', ["platform", "add", "ios@latest"], {stdio: 'inherit'}).on('exit', done);
     } else {
-        process.stdout.write('cleaning platform ios\n');
+        log('cleaning platform ios\n');
         var cmd = cp.spawn('cordova', ["clean", "ios"], {stdio: 'inherit'}).on('exit', done);
-        // cordova.clean("ios", {argv: "--verbose"});
-        // done();
     }
-});
+};
 
-// build iOS
-gulp.task("build-ios", function (done) {
-    cordova.build({
-        "platforms": ["ios"],
-        "options": {
-            argv: ["--release", "--verbose", "--buildConfig=build.json", "--device"]
-        }
-    }, done());
-});
+// --- Main Build Tasks ---
+// Cordova call
+function do_build (platform, target, cb) {
+    var options = [];
+    if (platform === 'android') {
+        options = ['build', platform, target, "--keystore=./temp/aim.keystore", "--storePassword=" + process.env.SIGNING_STORE_PASSWORD, "--alias=" + process.env.SIGNING_KEY_ALIAS, "--password=" + process.env.SIGNING_KEY_PASSWORD, "--gradleArg=--no-daemon"];
+    } else if (platform === 'ios') {
+        options = ['build', platform, target, "--verbose", "--buildConfig=build.json", "--device"];
+    }
+    //log('** cordova build: ' + options + '\n');
 
-// prep both Android and iOS
-gulp.task("prep", gulp.parallel("prep-android-dir", "prep-ios-dir"));
+    var cmd = cp.spawn('cordova', options, {stdio: 'inherit'}).on('exit', cb);
+};
+
+// copy over release .apk
+function copyAndroidArtifact() {
+    // Copy results to bin folder
+    return src("platforms/android/app/build/outputs/apk/release/*.apk").pipe(dest("bin/release/android"));
+};
+
+function build_ios(done) {
+    do_build('ios', '--release', done);
+};
+
+function build_android(done) {
+    do_build('android', '--release', done);
+};
+
+function build_android_debug(done) {
+    do_build('android', '--debug', done);
+}
+
+// --- Exported API / Visible to command line ---
 
 // build both Android and iOS
-gulp.task("build", gulp.parallel("build-android", "build-ios"));
-
-// default (gulp) - just build Android for the CI build
-gulp.task("default", gulp.series("build-android"), function () {
-    // Copy results to bin folder
-    gulp.src("platforms/android/app/build/output/apk/release/*.apk").pipe(gulp.dest("bin/release/android"));         // Gradle build
-});
+exports.build = series(
+    parallel(prep_android_dir, prep_ios_dir),
+    backup_js,
+    minify_js,
+    parallel(build_android, build_ios),
+    restore_js,
+    clean_backup,
+    copyAndroidArtifact
+);
+// ios (release)
+exports.ios = series(
+    prep_ios_dir,
+    backup_js,
+    minify_js,
+    build_ios,
+    restore_js,
+    clean_backup,
+);
+// Android (release)
+exports.android = series(
+    prep_android_dir,
+    backup_js,
+    minify_js,
+    build_android, 
+    restore_js,
+    clean_backup,
+    copyAndroidArtifact
+);
+// CI build (Android debug)
+exports.ci_build = series(
+    prep_android_dir,
+    backup_js,
+    minify_js,
+    build_android_debug, 
+    restore_js,
+    clean_backup,
+    copyAndroidArtifact
+);
+// default (gulp / no args) is CI build
+exports.default = this.ci_build;
