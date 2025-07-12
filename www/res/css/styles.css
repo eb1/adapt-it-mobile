@@ -495,10 +495,13 @@ button.light-grey {
 .scroller {
     border-top: 1px solid #aaa;
     bottom: 0;
+    bottom: env(safe-area-inset-bottom, 0);
     left: 0;
+    left: env(safe-area-inset-left, 0);
     overflow: auto;
     position: fixed;
     right: 0;
+    right: env(safe-area-inset-right, 0); 
     top: 57px;
     top: max(calc(env(safe-area-inset-top) + 57px), 77px);
 }
@@ -514,9 +517,11 @@ button.light-grey {
 .scroller-notb {
     bottom: 0;
     left: 0;
+    left: env(safe-area-inset-left, 0); 
     overflow: auto;
     position: fixed;
     right: 0;
+    right: env(safe-area-inset-right, 0); 
     top: 77px;
     top: max(calc(env(safe-area-inset-top) + 57px), 77px);
 }
@@ -524,10 +529,10 @@ button.light-grey {
 .scroller-bottom-tb {
     bottom: 61px;
     bottom: max(calc(env(safe-area-inset-bottom) + 61px), 61px);
-    left: 0;
+    left: env(safe-area-inset-left, 0);
     overflow: auto;
     position: fixed;
-    right: 0;
+    right: env(safe-area-inset-right, 0); 
     top: 57px;
     top: max(calc(env(safe-area-inset-top) + 57px), 77px);
 }
@@ -535,10 +540,12 @@ button.light-grey {
     background: #eee;
     bottom: 0;
     left: 0;
+    left: env(safe-area-inset-left, 0); 
     padding-bottom: 6px;
     padding-top: 6px;
     position: fixed;
     right: 0;
+    right: env(safe-area-inset-right, 0); 
 }
 /* indented controls (e.g., below radio buttons) */
 .indent {
@@ -573,8 +580,8 @@ button.light-grey {
     position:absolute;
 }
 .scroller-tb {
-    left: 0;
-    right: 0;
+    left: env(safe-area-inset-left, 0);
+    right: env(safe-area-inset-right, 0); 
     top: 58px;
     top: max(calc(env(safe-area-inset-top) + 58px), 78px);
 }
@@ -702,6 +709,7 @@ ul {
     opacity: 1;
     position: fixed;
     right: 0;
+    right: env(safe-area-inset-right, 0); 
     text-align: left;
     vertical-align: center;
     transition: all 0.5s ease;
