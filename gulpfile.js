@@ -82,11 +82,18 @@ function prep_ios_dir (done) {
 function do_build (platform, target, cb) {
     var options = [];
     if (platform === 'android') {
-        options = ['build', platform, target, "--keystore=./temp/aim.keystore", "--storePassword=" + process.env.SIGNING_STORE_PASSWORD, "--alias=" + process.env.SIGNING_KEY_ALIAS, "--password=" + process.env.SIGNING_KEY_PASSWORD, "--gradleArg=--no-daemon"];
+        options = ['build', platform, target, "--gradleArg=--no-daemon"];
+        if (target === '--release') {
+            // also sign this thing
+            options.push("--keystore=./temp/aim.keystore");
+            options.push("--storePassword=" + process.env.SIGNING_STORE_PASSWORD);
+            options.push("--alias=" + process.env.SIGNING_KEY_ALIAS);
+            options.push("--password=" + process.env.SIGNING_KEY_PASSWORD);
+        }
     } else if (platform === 'ios') {
         options = ['build', platform, target, "--verbose", "--buildConfig=build.json", "--device"];
     }
-    //log('** cordova build: ' + options + '\n');
+    // log('** cordova build: ' + options + '\n');
 
     var cmd = cp.spawn('cordova', options, {stdio: 'inherit'}).on('exit', cb);
 };
@@ -110,7 +117,6 @@ function build_android_debug(done) {
 }
 
 // --- Exported API / Visible to command line ---
-
 // build both Android and iOS
 exports.build = series(
     parallel(prep_android_dir, prep_ios_dir),
@@ -143,11 +149,11 @@ exports.android = series(
 // CI build (Android debug)
 exports.ci_build = series(
     prep_android_dir,
-    backup_js,
-    minify_js,
+    // backup_js,
+    // minify_js,
     build_android_debug, 
-    restore_js,
-    clean_backup,
+    // restore_js,
+    // clean_backup,
     copyAndroidArtifact
 );
 // default (gulp / no args) is CI build
