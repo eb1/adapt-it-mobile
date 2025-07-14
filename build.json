@@ -1,14 +1,9 @@
 {
     "android": {
         "debug": {
-            "keystore": "../certs/aim.keystore",
-            "storePassword": "",
-            "alias": "AIM",
-            "password" : "",
-            "keystoreType": ""
         },
         "release": {
-            "keystore": "../certs/aim.keystore",
+            "keystore": "./.temp/aim.keystore",
             "storePassword": "",
             "alias": "AIM",
             "password" : "",
