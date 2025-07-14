@@ -14,7 +14,9 @@ const paths = {
     js_src: './www/js/**/*',
     js_src_files: './www/js/***/*.js',
     js_dest: './www/js',
-    js_bak: './www_js_bak'
+    js_bak: './www_js_bak',
+    android_apk: './platforms/android/app/build/outputs/apk/***/*.apk',
+    android_bin: './bin' 
 };
 
 // --- Minification Tasks ---
@@ -101,7 +103,7 @@ function do_build (platform, target, cb) {
 // copy over release .apk
 function copyAndroidArtifact() {
     // Copy results to bin folder
-    return src("platforms/android/app/build/outputs/apk/release/*.apk").pipe(dest("bin/release/android"));
+    return src(paths.android_apk).pipe(dest(paths.android_bin));
 };
 
 function build_ios(done) {
