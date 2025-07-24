@@ -387,6 +387,8 @@
         "msgUseProject": "¿Quieres cambiar a este proyecto?",
         "ErrNotAIC": "No se encontraron datos del proyecto. (¿Es este un archivo de proyecto Adapt It (.aic)?)",
         "ErrCopyProjectFailed": "No se puede copiar el proyecto. Razón: __reason__",
+        "lblMD": "Markdown (.md)",
+        "lblHTML": "HTML (.html)",
         "_comment" : "****Add new strings BEFORE this line!****"
     },
     "help": {

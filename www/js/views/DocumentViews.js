@@ -19,6 +19,7 @@ define(function (require) {
         Backbone        = require('backbone'),
         Marionette      = require('marionette'),
         i18n            = require('i18n'),
+        marked          = require('marked'),
         projModel       = require('app/models/project'),
         tplLoadingPleaseWait = require('text!tpl/LoadingPleaseWait.html'),
         tplImportDoc    = require('text!tpl/CopyOrImport.html'),
@@ -76,7 +77,9 @@ define(function (require) {
             KBTMX: 6,    // https://www.ttt.org/oscarStandards/tmx/
             GLOSSKBXML: 7,
             SFM_KB: 8, // SFM with \lx \ge markers
-            LIFT: 9 // https://github.com/sillsdev/lift-standard
+            LIFT: 9, // https://github.com/sillsdev/lift-standard
+            MD: 10,     // https://daringfireball.net/projects/markdown/ (using the marked.js parser)
+            HTML: 11    // https://html.spec.whatwg.org
         },
         DestinationEnum = {
             FILE: 1,
@@ -2871,6 +2874,37 @@ define(function (require) {
                     // return true; // success
                     // END readSFMLexDoc()
                 };
+
+                // Markdown document
+                // This is a passthrough method; the markdown document gets converted to HTML
+                // using the marked library, and then sent to readHTMLDoc to actually do the parsing.
+                // This is because markdown is almost a shorthand for html (and can contain HTML snippets), so
+                // it's easier to just deal with html to usfm parsing below.
+                var readMDDoc = function(contents) {
+                    console.log("readMDDoc - entry");
+                    var htmlOpening = "<!DOCTYPE html><html><body>";
+                    var htmlClosing = "</body></html>";
+                    var newContents = htmlOpening + marked.parse(contents) + htmlClosing;
+                    return readHTMLDoc(marked.parse(newContents));
+                };
+
+                // HTML document
+                // We're not interested in the entire html spec, nor hyperlinks or script stuff (we disable scripts for security).
+                // AIM supports HTML for formatted document text.
+                var readHTMLDoc = function(contents) {
+                    console.log("readHTMLDoc - entry");
+                    var sp = null;
+                    var chaps = [];
+                    var htmlDoc = $.parseHTML(contents);
+                    var $html = $(htmlDoc);
+                    var chapterName = "";
+                    index = contents.indexOf("<body>");
+                    if (index === -1) {
+                        // not html we can work with (no body element)
+                        return false;
+                    }
+                    return true; // success
+                };
                 
                 // USFM document
                 // This is the file format for Bibledit and Paratext
@@ -4117,6 +4151,10 @@ define(function (require) {
                         // no \lx -- try parsing as a plain old USFM doc
                         result = readUSFMDoc(contents);
                     }
+                } else if (fileName.toLowerCase().indexOf(".md") > 0) {
+                    result = readMDDoc(contents);
+                } else if ((fileName.toLowerCase().indexOf(".htm") > 0) || (fileName.toLowerCase().indexOf(".html") > 0)) {
+                    result = readHTMLDoc(contents);                    
                 } else if (fileName.toLowerCase().indexOf(".usx") > 0) {
                     result = readUSXDoc(contents);
                 } else if (fileName.toLowerCase().indexOf(".lift") > 0) {
@@ -4174,6 +4212,8 @@ define(function (require) {
                         var newFileName = "";
                         if (contents.indexOf("tmx version=") >= 0) {
                             result = readTMXDoc(contents);
+                        } else if (contents.indexOf("<html") >= 0) {
+                            result = readHTMLDoc(contents);
                         } else if (contents.indexOf("glossingKB=\"1") >= 0) {
                             // _probably_ a glossing KB XML document
                             result = readGlossXMLDoc(contents);
@@ -4241,6 +4281,9 @@ define(function (require) {
                         } else if (contents.indexOf("\\lx") >= 0) {
                             // _probably_ \lx data for the KB
                             result = readSFMLexDoc(contents);
+                        } else if ((contents.indexOf("##") >= 0) || (contents.indexOf("===") >= 0)) {
+                            // _maybe_ a markdown file?
+                            result = readMDDoc(contents);
                         } else {
                             // unknown -- try reading it as a text document
                             result = readTextDoc(contents);
