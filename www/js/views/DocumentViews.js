@@ -2881,28 +2881,373 @@ define(function (require) {
                 // This is because markdown is almost a shorthand for html (and can contain HTML snippets), so
                 // it's easier to just deal with html to usfm parsing below.
                 var readMDDoc = function(contents) {
-                    console.log("readMDDoc - entry");
-                    var htmlOpening = "<!DOCTYPE html><html><body>";
+                    console.log("readMDDoc - converting MD to HTML");
+                    if (fileName.indexOf(".") > -1) {
+                        // most likely has an extension -- remove it for our book name guess
+                        bookName = fileName.substring(0, fileName.lastIndexOf('.'));
+                    } else {
+                        bookName = fileName;
+                    }
+                    var htmlOpening = "<!DOCTYPE html><html><head><title>" + bookName + "</title></head><body>";
                     var htmlClosing = "</body></html>";
                     var newContents = htmlOpening + marked.parse(contents) + htmlClosing;
                     return readHTMLDoc(marked.parse(newContents));
                 };
 
                 // HTML document
-                // We're not interested in the entire html spec, nor hyperlinks or script stuff (we disable scripts for security).
-                // AIM supports HTML for formatted document text.
                 var readHTMLDoc = function(contents) {
-                    console.log("readHTMLDoc - entry");
+                    var newline = new RegExp('[\n\r\f\u2028\u2029]+', 'g');
+                    var i = 0;
                     var sp = null;
                     var chaps = [];
-                    var htmlDoc = $.parseHTML(contents);
-                    var $html = $(htmlDoc);
+                    var ArrHTML = $.parseHTML(contents);
                     var chapterName = "";
+                    var nodeStyle = "";
+                    var closingMarker = "";
+                    var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
+                    console.log("Reading HTML file:" + fileName);
+                    var parseNode = function (element) {
+                        nodeStyle = "";
+                        console.log("parseNode - Element type: " + $(element)[0].nodeType)
+                        // process the node itself
+                        //Handlebars.escape($(element)[0].nodeValue);
+                        if ($(element)[0].nodeType === Node.ELEMENT_NODE) { 
+                            // element node
+                            switch ($(element)[0].tagName.toLowerCase()) {
+                            case "body":
+                            case "applet":
+                            case "area":
+                            case "article":
+                            case "aside":
+                            case "audio":
+                            case "base":
+                            case "basefont":
+                            case "bdi":
+                            case "bdo":
+                            case "bgsound":
+                            case "big":
+                            case "blockquote":
+                            case "body":
+                            case "button":
+                            case "caption":
+                            case "canvas":
+                            case "center":
+                            case "cite":
+                            case "code":
+                            case "column":
+                            case "colgroup":
+                            case "comment":
+                            case "data":
+                            case "datalist":
+                            case "dd":
+                            case "define":
+                            case "delete":
+                            case "details":
+                            case "dialog":
+                            case "dir":
+                            case "div":
+                            case "dl":
+                            case "dt":
+                            case "embed":
+                            case "fieldset":
+                            case "figcaption":
+                            case "figure":
+                            case "font":
+                            case "footer":
+                            case "form":
+                            case "frame":
+                            case "frameset":
+                            case "head":
+                            case "header":
+                            case "heading":
+                            case "hgroup":
+                            case "hr":
+                            case "html":
+                            case "iframes":
+                            case "image":
+                            case "input":
+                            case "ins":
+                            case "isindex":
+                            case "italic":
+                            case "kbd":
+                            case "keygen":
+                            case "label":
+                            case "legend":
+                            case "list":
+                            case "main":
+                            case "mark":
+                            case "marquee":
+                            case "menuitem":
+                            case "meta":
+                            case "meter":
+                            case "nav":
+                            case "nobreak":
+                            case "noembed":
+                            case "noscript":
+                            case "object":
+                            case "optgroup":
+                            case "option":
+                            case "output":
+                            case "paragraphs":
+                            case "param":
+                            case "phrase":
+                            case "pre":
+                            case "progress":
+                            case "q":
+                            case "rp":
+                            case "rt":
+                            case "ruby":
+                            case "s":
+                            case "samp":
+                            case "script":
+                            case "section":
+                            case "small":
+                            case "source":
+                            case "spacer":
+                            case "span":
+                            case "strike":
+                            case "strong":
+                            case "style":
+                            case "sub":
+                            case "summary":
+                            case "sup":
+                            case "svg":
+                            case "table":
+                            case "tbody":
+                            case "td":
+                            case "template":
+                            case "tfoot":
+                            case "time":
+                            case "title":
+                            case "tr":
+                            case "track":
+                            case "tt":
+                            case "underline":
+                            case "var":
+                            case "video":
+                            case "wbr":
+                            case "xmp":
+                            case "link":
+                                break;
+
+                            // tags with a direct mapping to a USFM marker
+                            case "break":
+                                markers += "\\b ";
+                                break;
+
+                            case "bold":
+                                markers += "\\bd ";
+                                break;
+                            
+                            case "th":
+                            case "thead":
+                                markers += "\\th ";
+                                break;
+
+                            case "tr": // note: the first tr in USFM denotes the start of a table (so no \\table marker)
+                                markers += "\\tr ";
+                                break;
+
+                            case "ul":
+                                markers += "\\ul ";
+                                break;
+
+                            // tags that don't correspond to usfm, but should be harmless
+                            case "abbreviation":
+                            case "acronym":
+                            case "address":
+                            case "anchor":
+
+                                break;
+
+                            // tags that need to be hidden / encoded
+
+                            // ignored tags (also those tags handled elsewhere)
+
+                            default:
+                                break;
+                            }
+                        }
+                        
+                        // If this is a text node, create any needed sourcephrases
+                        if ($(element)[0].nodeType === Node.TEXT_NODE) {
+                            // Split the text into an array
+                            // Note that this is analogous to the AI "strip" of text, and not the whole document
+                            arr = ($(element)[0].nodeValue).trim().split(spaceRE);
+                            arrSP = ($(element)[0].nodeValue).trim().split(nonSpaceRE);
+                            i = 0;
+                            while (i < arr.length) {
+                                // check for a marker
+                                if (arr[i].length === 0) {
+                                    // nothing in this token -- skip
+                                    i++;
+                                } else if (arr[i].length === 1 && puncts.indexOf(arr[i]) > -1) {
+                                    // punctuation token -- add to the prepuncts
+                                    prepuncts += arr[i];
+                                    i++;
+                                } else {
+                                    // "normal" sourcephrase token
+                                    s = arr[i];
+                                    // look for leading and trailing punctuation
+                                    // leading...
+                                    if (puncts.indexOf(arr[i].charAt(0)) > -1) {
+                                        // leading punct 
+                                        punctIdx = 0;
+                                        while (puncts.indexOf(arr[i].charAt(punctIdx)) > -1 && punctIdx < arr[i].length) {
+                                            prepuncts += arr[i].charAt(punctIdx);
+                                            punctIdx++;
+                                        }
+                                    }
+                                    if (punctIdx === s.length) {
+                                        // it'a ALL punctuation -- jump to the next token
+                                        i++;
+                                    } else {
+                                        // not all punctuation -- check following punctuation, then create a sourcephrase
+                                        if (puncts.indexOf(s.charAt(s.length - 1)) > -1) {
+                                            // trailing punct 
+                                            punctIdx = s.length - 1;
+                                            while (puncts.indexOf(s.charAt(punctIdx)) > -1 && punctIdx > 0) {
+                                                follpuncts += s.charAt(punctIdx);
+                                                punctIdx--;
+                                            }
+                                        }
+                                        // Now create a new sourcephrase
+                                        spID = window.Application.generateUUID();
+                                        sp = new spModel.SourcePhrase({
+                                            spid: spID,
+                                            norder: norder,
+                                            chapterid: chapterID,
+                                            vid: verseID,
+                                            markers: markers,
+                                            orig: null,
+                                            prepuncts: prepuncts,
+                                            midpuncts: midpuncts,
+                                            follpuncts: follpuncts,
+                                            srcwordbreak: arrSP[i],
+                                            source: s,
+                                            target: ""
+                                        });
+                                        markers = "";
+                                        prepuncts = "";
+                                        follpuncts = "";
+                                        punctIdx = 0;
+                                        index++;
+                                        norder++;
+                                        sps.push(sp);
+                                        // if necessary, send the next batch of SourcePhrase INSERT transactions
+                                        if ((sps.length % MAX_BATCH) === 0) {
+                                            batchesSent++;
+                                            updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailChapterVerse", {chap: chapterName, verse: verseCount})}), 0);
+                                            deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - MAX_BATCH)));
+                                            deferreds[deferreds.length - 1].done(function() {
+                                                updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
+                                            });        
+                                        }
+                                        i++;
+                                    }
+                                }
+                            }
+                        }
+                        // recurse into children
+                        if ($(element).contents().length > 0) {
+                            $(element).contents().each(function (idx, elt) {
+                                parseNode(elt);
+                            });
+                        }
+                        // done with node -- if there was a closing marker, copy it over to the markers
+                        // so it gets picked up in the next sourcephrase
+                        if (closingMarker.length > 0) {
+                            markers += closingMarker + " "; 
+                            closingMarker = "";
+                        }
+                    };
+
                     index = contents.indexOf("<body>");
                     if (index === -1) {
                         // not html we can work with (no body element)
                         return false;
                     }
+                    bookID = window.Application.generateUUID();
+                    // Create the book and chapter 
+                    book = new bookModel.Book({
+                        bookid: bookID,
+                        projectid: project.get('projectid'),
+                        name: bookName,
+                        filename: fileName,
+                        chapters: []
+                    });
+                    books.add(book);
+                    // (for now, just one chapter -- eventually we could chunk this out based on file size)
+                    chapterID = window.Application.generateUUID();
+                    chaps.push(chapterID);
+                    chapter = new chapModel.Chapter({
+                        chapterid: chapterID,
+                        bookid: bookID,
+                        projectid: project.get('projectid'),
+                        name: bookName,
+                        lastadapted: 0,
+                        versecount: 0
+                    });
+                    chapters.add(chapter);
+                    // set the current bookmark if not already set
+                    if (window.Application.currentBookmark === null) {
+                        var bookmarkid = window.Application.generateUUID();
+                        var newBookmark = new userModels.Bookmark({
+                            bookmarkid: bookmarkid,
+                            projectid: project.get('projectid'),
+                            name: bookName,
+                            bookid: bookID,
+                            chapterid: chapterID // note: no spID set (will start at beginning)
+                        });
+                        // save and add to the collection
+                        newBookmark.save();
+                        window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", bookName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
+                    }
+
+                    // now read the contents of the file
+                    ArrHTML.forEach((item) => parseNode(item));
+                    // parseNode($($html).find("html"));
+
+                    // add any remaining sourcephrases
+                    if ((sps.length % MAX_BATCH) > 0) {
+                        batchesSent++;
+                        updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailWords", {count: sps.length})}), 0);
+                        deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - (sps.length % MAX_BATCH))));
+                        deferreds[deferreds.length - 1].done(function() {
+                            updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
+                        });
+                    }
+                    // track all those deferred calls to addBatch -- when they all complete, report the results to the user
+                    intervalID = window.setInterval(function() {
+                        var result = checkState();
+                        if (result === "pending") {
+                            // pending -- do nothing
+                        } else if (result === "resolved") {
+                            // resolved
+                            clearInterval(intervalID);
+                            intervalID = 0;
+                            importSuccess();
+                        } else {
+                            // rejected
+                            clearInterval(intervalID);
+                            intervalID = 0;
+                            importFail(result);
+                        }
+                    }, 1000);
+
+                    // for non-scripture texts, there are no verses. Keep track of how far we are by using a 
+                    // negative value for the # of SourcePhrases in the text.
+                    chapter.set('versecount', -(index), {silent: true});
+                    chapter.save();
+                    book.set('chapters', chaps, {silent: true});
+                    book.save();
                     return true; // success
                 };
                 
