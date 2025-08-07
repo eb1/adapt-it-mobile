@@ -2959,7 +2959,6 @@ define(function (require) {
                             case "frameset":
                             case "head":
                             case "header":
-                            case "heading":
                             case "hgroup":
                             case "hr":
                             case "html":
@@ -3038,7 +3037,30 @@ define(function (require) {
                             case "bold":
                                 markers += "\\bd ";
                                 break;
-                            
+
+                            case "h1":
+                                markers += "\\mt1 "; // no closing marker
+                                break;
+                            case "h2":
+                                markers += "\\mt2 "; // no closing marker
+                                break;
+                            case "h3":
+                                markers += "\\mt3 "; // no closing marker
+                                break;
+                            case "h4":
+                                markers += "\\mt4 "; // no closing marker
+                                break;
+                            case "h5":
+                                markers += "\\mt5 "; // no closing marker
+                                break;
+                            case "h6":
+                                markers += "\\mt6 "; // no closing marker
+                                break;
+                            case "p":
+                                markers += "\\p "; // no closing marker
+                                break;
+
+                            case "em":
                             case "th":
                             case "thead":
                                 markers += "\\th ";
@@ -3048,8 +3070,8 @@ define(function (require) {
                                 markers += "\\tr ";
                                 break;
 
-                            case "ul":
-                                markers += "\\ul ";
+                            case "li":
+                                markers += "\\li1 "; // TODO: indents?
                                 break;
 
                             // tags that don't correspond to usfm, but should be harmless
