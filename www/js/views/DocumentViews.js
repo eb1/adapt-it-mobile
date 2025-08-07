@@ -2963,11 +2963,9 @@ define(function (require) {
                             case "hr":
                             case "html":
                             case "iframes":
-                            case "image":
                             case "input":
                             case "ins":
                             case "isindex":
-                            case "italic":
                             case "kbd":
                             case "keygen":
                             case "label":
@@ -3034,10 +3032,26 @@ define(function (require) {
                                 markers += "\\b ";
                                 break;
 
-                            case "bold":
-                                markers += "\\bd ";
+                            case "img":
+                                markers += "\\fig " + element.alt + "|src=\"" + element.src + "\"|size=\"col\"|ref=\" \" \\fig*";
+                                // skip the rest of this element (and children)
                                 break;
 
+                            // character stylings -- discouraged usfm, but still valid
+                            case "b":
+                                markers += "\\bd ";
+                                closingMarker = "\\bd* ";
+                                break;
+                            case "i":
+                                markers += "\\it ";
+                                closingMarker = "\\it* ";
+                                break;
+                            case "u": // emphasis
+                                markers += "\\em ";
+                                closingMarker = "\\em* ";
+                                break;
+
+                            // headings
                             case "h1":
                                 markers += "\\mt1 "; // no closing marker
                                 break;
