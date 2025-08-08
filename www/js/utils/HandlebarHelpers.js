@@ -11,6 +11,9 @@ define(function (require) {
         Handlebars  = require('handlebars'),
         filterID    = "",
         isSpecialText = false,
+        isBold = false,
+        isItalic = false,
+        isUnderlined = false,
         i18n        = require('i18n');
     
     // Return the localized string corresponding to the specified key.
@@ -56,18 +59,54 @@ define(function (require) {
             filterString = window.Application.filterList,
             newID = window.Application.generateUUID(),
             hasSpecialText = false,
-            SpecialTextMarkers = " _heading_base _intro_base _list_base _notes_base _peripherals_base at add bn br bt cap efm ef d di div dvrf f fe fr fk fq fqa fl fp ft fdc fv fw fm free gm gs gd gp h h1 h2 h3 hr usfm id imt imt1 imt2 imt3 imt4 imte imte1 imte2 is is1 is2 ip ipi ipq ipr iq iq1 iq2 iq3 im imi ili ili1 ili2 imq ib iot io io1 io2 io3 io4 ior iex iqt ie k1 k2 lit mr ms ms1 ms2 ms3 mt mt1 mt2 mt3 mt4 mte mte1 mte2 nc nt note p1 p2 pm pmc pmr pt ps pp pq r rem rr rq s s1 s2 s3 s4 sp sr sx sts",
+            SpecialTextMarkers = " _heading_base _intro_base _list_base _notes_base _peripherals_base at add bn br bt cap efm ef d di div dvrf f fe fr fk fq fqa fl fp ft fdc fv fw fm free gm gs gd gp h h1 h2 h3 hr usfm id imt imt1 imt2 imt3 imt4 imte imte1 imte2 is is1 is2 ip ipi ipq ipr iq iq1 iq2 iq3 im imi ili ili1 ili2 imq ib iot io io1 io2 io3 io4 ior iex iqt ie k1 k2 lit mr ms ms1 ms2 ms3 mt mt1 mt2 mt3 mt4 mt5 mt6 mte mte1 mte2 nc nt note p1 p2 pm pmc pmr pt ps pp pq r rem rr rq s s1 s2 s3 s4 sp sr sx sts",
             i = 0;
         // if no markers are present, add any special text info and exit
         if (this.markers.length === 0) {
+            // continuing through special text?
             if (isSpecialText === true) {
-                // continuing through some special text
                 result += " specialtext";
             }
+            // continuing through character formatting?
+            if (isBold === true) {
+                result += " fmt_b";
+            }
+            if (isItalic === true) {
+                result += " fmt_i";
+            }
+            if (isUnderlined === true) {
+                result += " fmt_u";
+            }
+            // done -- turn off the filtering flag and exit
             filtered = false;
             filterID = ""; // no longer filtering
             return new Handlebars.SafeString(result);
         }
+        // check for char formatting markers
+        if (this.markers.indexOf("\\bd") > -1) {
+            result += " fmt_b";
+            isBold = true;
+        } else {
+            isBold = false;
+        }
+        if (this.markers.indexOf("\\it") > -1) {
+            result += " fmt_i";
+            isItalic = true;
+        } else {
+            isItalic = false;
+        }
+        if (this.markers.indexOf("\\em") > -1) {
+            result += " fmt_u";
+            isUnderlined = true;
+        } else {
+            isUnderlined = false;
+        }
+        if (this.markers.indexOf("\\bdit") > -1) {
+            // USFM has a combo bold/italic marker - set the bold and italic classes
+            result += " fmt_b fmt_i";
+            isUnderlined = true;
+            isBold = true;
+        } 
         // loop through the marker array
         for (i = 0; i < ary.length; i++) {
             if (i > 0) {

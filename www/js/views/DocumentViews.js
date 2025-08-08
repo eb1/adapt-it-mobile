@@ -2882,16 +2882,34 @@ define(function (require) {
                 // it's easier to just deal with html to usfm parsing below.
                 var readMDDoc = function(contents) {
                     console.log("readMDDoc - converting MD to HTML");
-                    if (fileName.indexOf(".") > -1) {
-                        // most likely has an extension -- remove it for our book name guess
-                        bookName = fileName.substring(0, fileName.lastIndexOf('.'));
+                    if (fileName.indexOf(i18n.t("view.lblText") + "-") > -1) {
+                        // Attempt to take the bookName from a H1 marker (# )
+                        if (contents.indexOf("# ") > -1) {
+                            // pull out from the # to the next line (if possible)
+                            bookName = contents.substring(contents.indexOf("# ") + 2, contents.indexOf("\n", contents.indexOf("# ") + 2));
+                            if (bookName.length === 0) {
+                                // welp, we tried - fall back on clipboard name
+                                bookName = fileName;
+                            }
+                        } else {
+                            // fall back on "Text-{guid}" clipboard snippet name
+                            bookName = fileName;
+                        }
                     } else {
-                        bookName = fileName;
+                        // not a clipboard snippet -- does it have a file extension?
+                        if (fileName.indexOf(".") > -1) {
+                            // has an extension -- remove it for our book name guess
+                            bookName = fileName.substring(0, fileName.lastIndexOf('.'));
+                        } else {
+                            // no extension -- use it as-is for our book name guess
+                            bookName = fileName;
+                        }
                     }
+                    // convert the contents to html and send it to readHTMLDoc
                     var htmlOpening = "<!DOCTYPE html><html><head><title>" + bookName + "</title></head><body>";
                     var htmlClosing = "</body></html>";
                     var newContents = htmlOpening + marked.parse(contents) + htmlClosing;
-                    return readHTMLDoc(marked.parse(newContents));
+                    return readHTMLDoc(newContents);
                 };
 
                 // HTML document
@@ -3003,7 +3021,6 @@ define(function (require) {
                             case "spacer":
                             case "span":
                             case "strike":
-                            case "strong":
                             case "style":
                             case "sub":
                             case "summary":
@@ -3019,7 +3036,6 @@ define(function (require) {
                             case "tr":
                             case "track":
                             case "tt":
-                            case "underline":
                             case "var":
                             case "video":
                             case "wbr":
@@ -3039,9 +3055,11 @@ define(function (require) {
 
                             // character stylings -- discouraged usfm, but still valid
                             case "b":
+                            case "strong":
                                 markers += "\\bd ";
                                 closingMarker = "\\bd* ";
                                 break;
+                            case "em":
                             case "i":
                                 markers += "\\it ";
                                 closingMarker = "\\it* ";
@@ -3074,7 +3092,6 @@ define(function (require) {
                                 markers += "\\p "; // no closing marker
                                 break;
 
-                            case "em":
                             case "th":
                             case "thead":
                                 markers += "\\th ";

@@ -1434,6 +1434,15 @@ div.preview div.pile {
 div.specialtext div.source {
 	color: #aa0000; /* red */
 }
+div.fmt_i div.source {
+    font-style: italic;
+}
+div.fmt_b div.source {
+    font-weight: bold;
+}
+div.fmt_u div.source {
+    text-decoration: underline;
+}
 .retranslation {
 	color: #996633; /* brown */
 }
