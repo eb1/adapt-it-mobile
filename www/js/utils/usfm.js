@@ -2415,16 +2415,16 @@ define(function (require) {
                 userCanSetFilter: "0"
             },
             {
-                name: "_aim_normal",
-                endMarker: "_aim_normal*",
+                name: "aim_",
+                endMarker: "aim_*",
                 type: "para",
                 description: "Plain text for round-tripping (e.g., markup that AIM doesn't support)",
                 filter: "1",
                 userCanSetFilter: "0"
             },
             {
-                name: "_aim_enc",
-                endMarker: "_aim_enc*",
+                name: "aim_e",
+                endMarker: "aim_e*",
                 type: "para",
                 description: "UUEncoded text for round-tripping (e.g., scripts)",
                 filter: "1",

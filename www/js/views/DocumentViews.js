@@ -714,7 +714,7 @@ define(function (require) {
                                 } else {
                                     // some other char item
                                     markers += "\\" + element.attributes.item("style").nodeValue;
-                                    closingMarker = "\\" + element.attributes.item("style").nodeValue + "*";
+                                    closingMarker += "\\" + element.attributes.item("style").nodeValue + "*";
                                 }
                                 if (element.getAttribute("link-href") && element.getAttribute("link-href").length > 0) {
                                     markers += " \\z-link-href=\"" + element.getAttributes.item("link-href").nodeValue + "\"";
@@ -775,7 +775,7 @@ define(function (require) {
                                 if (element.getAttribute("copy") && element.getAttribute("copy").length > 0) {
                                     markers += " copy=\"" + element.attributes.item("copy").nodeValue + "\"";    
                                 }
-                                closingMarker = "\\fig*";
+                                closingMarker += "\\fig*";
                                 break;
                             case "note":
                                     //caller, style
@@ -786,7 +786,7 @@ define(function (require) {
                                 if (element.getAttribute("caller") && element.getAttribute("caller").length > 0) {
                                     markers += " " + element.getAttribute("caller") + " ";
                                 }
-                                closingMarker = "\\" + element.getAttribute("style") + "*";
+                                closingMarker += "\\" + element.getAttribute("style") + "*";
                                 if (element.getAttribute("category") && element.getAttribute("category").length > 0) {
                                     markers += "\\cat " + element.getAttribute("category") + "\\cat*";
                                 }
@@ -821,7 +821,7 @@ define(function (require) {
                                 if (element.getAttribute("category") && element.getAttribute("category").length > 0) {
                                     markers += " \\cat " + element.getAttribute("category") + "\\cat*";
                                 }
-                                closingMarker = "\\esbe*";
+                                closingMarker += "\\esbe*";
                                 break;
                             case "ref":
                                 if (markers.length > 0) {
@@ -2917,11 +2917,15 @@ define(function (require) {
                     var newline = new RegExp('[\n\r\f\u2028\u2029]+', 'g');
                     var i = 0;
                     var sp = null;
+                    var htmlTag = "";
                     var chaps = [];
                     var ArrHTML = $.parseHTML(contents);
                     var chapterName = "";
                     var nodeStyle = "";
                     var closingMarker = "";
+                    var ul = 0;
+                    var ol = 0;
+                    var liTag = [];
                     var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
                     console.log("Reading HTML file:" + fileName);
                     var parseNode = function (element) {
@@ -2932,11 +2936,90 @@ define(function (require) {
                         if ($(element)[0].nodeType === Node.ELEMENT_NODE) { 
                             // element node
                             switch ($(element)[0].tagName.toLowerCase()) {
+
+                            // **HTML** tags with a direct mapping to a USFM marker get converted
+                            case "th":
+                            case "thead":
+                                markers += "\\th ";
+                                break;
+
+                            case "tr": // note: the first tr in USFM denotes the start of a table (so no \\table marker)
+                                markers += "\\tr ";
+                                break;
+
+                            case "ul":
+                                ul++;
+                                liTag.push("\\ul" + ul);
+                                break;
+                            case "ol":
+                                ol++;
+                                liTag.push("\\ol" + ul);
+                                break;
+
+                            case "li":
+                                markers += liTag.at(liTag.length - 1);
+                                break;
+
+                            case "break":
+                                markers += "\\b ";
+                                break;
+                            case "img":
+                                markers += "\\fig " + element.alt + "|src=\"" + element.src + "\" size=\"col\" ref=\" \" \\fig*";
+                                // skip the rest of this element (and children)
+                                break;
+                            // character stylings -- discouraged usfm, but still valid
+                            case "b":
+                            case "strong":
+                                markers += "\\bd ";
+                                closingMarker += "\\bd* ";
+                                break;
+                            case "em":
+                            case "i":
+                                markers += "\\it ";
+                                closingMarker += "\\it* ";
+                                break;
+                            case "u": // emphasis
+                                markers += "\\em ";
+                                closingMarker += "\\em* ";
+                                break;
+                            // headings
+                            case "h1":
+                                markers += "\\mt1 "; // no closing marker
+                                break;
+                            case "h2":
+                                markers += "\\mt2 "; // no closing marker
+                                break;
+                            case "h3":
+                                markers += "\\mt3 "; // no closing marker
+                                break;
+                            case "h4":
+                                markers += "\\mt4 "; // no closing marker
+                                break;
+                            case "h5":
+                                markers += "\\mt5 "; // no closing marker
+                                break;
+                            case "h6":
+                                markers += "\\mt6 "; // no closing marker
+                                break;
+                            case "p":
+                                markers += "\\p "; // no closing marker
+                                break;
+
+                            case "aside":
+                                markers += "\\esb ";
+                                closingMarker += "\\esbe ";
+                                break;
+
+                            case "sup":
+                                markers += "\\sup ";
+                                closingMarker += "\\sup* ";
+                                break;
+
+                            // **HTML** tags
                             case "body":
                             case "applet":
                             case "area":
                             case "article":
-                            case "aside":
                             case "audio":
                             case "base":
                             case "basefont":
@@ -3024,7 +3107,6 @@ define(function (require) {
                             case "style":
                             case "sub":
                             case "summary":
-                            case "sup":
                             case "svg":
                             case "table":
                             case "tbody":
@@ -3041,68 +3123,20 @@ define(function (require) {
                             case "wbr":
                             case "xmp":
                             case "link":
-                                break;
-
-                            // tags with a direct mapping to a USFM marker
-                            case "break":
-                                markers += "\\b ";
-                                break;
-
-                            case "img":
-                                markers += "\\fig " + element.alt + "|src=\"" + element.src + "\"|size=\"col\"|ref=\" \" \\fig*";
-                                // skip the rest of this element (and children)
-                                break;
-
-                            // character stylings -- discouraged usfm, but still valid
-                            case "b":
-                            case "strong":
-                                markers += "\\bd ";
-                                closingMarker = "\\bd* ";
-                                break;
-                            case "em":
-                            case "i":
-                                markers += "\\it ";
-                                closingMarker = "\\it* ";
-                                break;
-                            case "u": // emphasis
-                                markers += "\\em ";
-                                closingMarker = "\\em* ";
-                                break;
-
-                            // headings
-                            case "h1":
-                                markers += "\\mt1 "; // no closing marker
-                                break;
-                            case "h2":
-                                markers += "\\mt2 "; // no closing marker
-                                break;
-                            case "h3":
-                                markers += "\\mt3 "; // no closing marker
-                                break;
-                            case "h4":
-                                markers += "\\mt4 "; // no closing marker
-                                break;
-                            case "h5":
-                                markers += "\\mt5 "; // no closing marker
-                                break;
-                            case "h6":
-                                markers += "\\mt6 "; // no closing marker
-                                break;
-                            case "p":
-                                markers += "\\p "; // no closing marker
-                                break;
-
-                            case "th":
-                            case "thead":
-                                markers += "\\th ";
-                                break;
-
-                            case "tr": // note: the first tr in USFM denotes the start of a table (so no \\table marker)
-                                markers += "\\tr ";
-                                break;
-
-                            case "li":
-                                markers += "\\li1 "; // TODO: indents?
+                                // filtered marker
+                                markers += "\\aim_e ";
+                                closingMarker += "\\aim_e* ";
+                                // build a marker containing the name and attributes (if any)
+                                // for this HTML tag
+                                htmlTag = $(element)[0].tagName.toLowerCase();
+                                if ($(element)[0].attributes.length > 0) {
+                                    // this tag has attributes -- add them to the sourcephrase
+                                    $.each($(element)[0].attributes, function(i, att) {
+                                        htmlTag += "|\"" + att.name + "\"=\"" + att.value + "\"";
+                                })
+                                }
+                                // add the marker
+                                markers += "\\_ht_" + htmlTag;
                                 break;
 
                             // tags that don't correspond to usfm, but should be harmless
