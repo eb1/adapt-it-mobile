@@ -2915,29 +2915,28 @@ define(function (require) {
                 // HTML document
                 var readHTMLDoc = function(contents) {
                     var newline = new RegExp('[\n\r\f\u2028\u2029]+', 'g');
+                    var voidElts = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
                     var i = 0;
                     var sp = null;
                     var htmlTag = "";
                     var chaps = [];
-                    var ArrHTML = $.parseHTML(contents);
+                    var arrHTML = $.parseHTML(contents);
                     var chapterName = "";
                     var nodeStyle = "";
-                    var closingMarker = "";
-                    var ul = 0;
-                    var ol = 0;
-                    var liTag = [];
+                    var arrClosing = [];
+                    var ul = 0; // for tracking \\li# marker level
                     var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
                     console.log("Reading HTML file:" + fileName);
                     var parseNode = function (element) {
                         nodeStyle = "";
                         console.log("parseNode - Element type: " + $(element)[0].nodeType)
                         // process the node itself
-                        //Handlebars.escape($(element)[0].nodeValue);
                         if ($(element)[0].nodeType === Node.ELEMENT_NODE) { 
                             // element node
                             switch ($(element)[0].tagName.toLowerCase()) {
 
-                            // **HTML** tags with a direct mapping to a USFM marker get converted
+                            // **HTML** tags with a direct mapping to a USFM marker 
+                            // - these get converted to usfm
                             case "th":
                             case "thead":
                                 markers += "\\th ";
@@ -2947,17 +2946,8 @@ define(function (require) {
                                 markers += "\\tr ";
                                 break;
 
-                            case "ul":
-                                ul++;
-                                liTag.push("\\ul" + ul);
-                                break;
-                            case "ol":
-                                ol++;
-                                liTag.push("\\ol" + ul);
-                                break;
-
                             case "li":
-                                markers += liTag.at(liTag.length - 1);
+                                markers += "\\li" + ul + " ";
                                 break;
 
                             case "break":
@@ -2971,16 +2961,16 @@ define(function (require) {
                             case "b":
                             case "strong":
                                 markers += "\\bd ";
-                                closingMarker += "\\bd* ";
+                                arrClosing.push("\\bd* ");
                                 break;
                             case "em":
                             case "i":
                                 markers += "\\it ";
-                                closingMarker += "\\it* ";
+                                arrClosing.push("\\it* ");
                                 break;
                             case "u": // emphasis
                                 markers += "\\em ";
-                                closingMarker += "\\em* ";
+                                arrClosing.push("\\em* ");
                                 break;
                             // headings
                             case "h1":
@@ -3007,16 +2997,20 @@ define(function (require) {
 
                             case "aside":
                                 markers += "\\esb ";
-                                closingMarker += "\\esbe ";
+                                arrClosing.push("\\esbe ");
                                 break;
 
                             case "sup":
                                 markers += "\\sup ";
-                                closingMarker += "\\sup* ";
+                                arrClosing.push("\\sup* ");
                                 break;
 
-                            // **HTML** tags
-                            case "body":
+                            // **all other HTML tags**
+                            // prepended with a \\_ht_<tagname>
+                            case "abbreviation":
+                            case "acronym":
+                            case "address":
+                            case "anchor":
                             case "applet":
                             case "area":
                             case "article":
@@ -3083,6 +3077,7 @@ define(function (require) {
                             case "noembed":
                             case "noscript":
                             case "object":
+                            case "ol":
                             case "optgroup":
                             case "option":
                             case "output":
@@ -3118,17 +3113,24 @@ define(function (require) {
                             case "tr":
                             case "track":
                             case "tt":
+                            case "ul":
                             case "var":
                             case "video":
                             case "wbr":
                             case "xmp":
                             case "link":
-                                // filtered marker
-                                markers += "\\aim_e ";
-                                closingMarker += "\\aim_e* ";
                                 // build a marker containing the name and attributes (if any)
                                 // for this HTML tag
                                 htmlTag = $(element)[0].tagName.toLowerCase();
+                                // special case -- li in usfm has an indent level
+                                if (htmlTag === "ul") {
+                                    ul++;
+                                }
+                                // add a closing tag UNLESS we're looking at a void HTML element
+                                // (one that doesn't have a close tag -- <hr> for example)
+                                if (!voidElts.includes(htmlTag)) {
+                                    arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                }
                                 if ($(element)[0].attributes.length > 0) {
                                     // this tag has attributes -- add them to the sourcephrase
                                     $.each($(element)[0].attributes, function(i, att) {
@@ -3139,19 +3141,8 @@ define(function (require) {
                                 markers += "\\_ht_" + htmlTag;
                                 break;
 
-                            // tags that don't correspond to usfm, but should be harmless
-                            case "abbreviation":
-                            case "acronym":
-                            case "address":
-                            case "anchor":
-
-                                break;
-
-                            // tags that need to be hidden / encoded
-
-                            // ignored tags (also those tags handled elsewhere)
-
                             default:
+                                console.log("WARN: skipping tag - " + $(element)[0].tagName.toLowerCase());
                                 break;
                             }
                         }
@@ -3243,9 +3234,12 @@ define(function (require) {
                         }
                         // done with node -- if there was a closing marker, copy it over to the markers
                         // so it gets picked up in the next sourcephrase
-                        if (closingMarker.length > 0) {
-                            markers += closingMarker + " "; 
-                            closingMarker = "";
+                        if (arrClosing.length > 0) {
+                            var strClose = arrClosing.pop();
+                            if (strClose.indexOf("\\ul") > -1) {
+                                ul--; // lower the indent level
+                            }
+                            markers += strClose + " "; 
                         }
                     };
 
@@ -3299,7 +3293,7 @@ define(function (require) {
                     }
 
                     // now read the contents of the file
-                    ArrHTML.forEach((item) => parseNode(item));
+                    arrHTML.forEach((item) => parseNode(item));
                     // parseNode($($html).find("html"));
 
                     // add any remaining sourcephrases

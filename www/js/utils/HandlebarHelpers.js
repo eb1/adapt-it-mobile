@@ -14,6 +14,8 @@ define(function (require) {
         isBold = false,
         isItalic = false,
         isUnderlined = false,
+        isSmallCaps = false,
+        isSuperscript = false,
         i18n        = require('i18n');
     
     // Return the localized string corresponding to the specified key.
@@ -56,6 +58,7 @@ define(function (require) {
             filtered = false,
             tmpString = "",
             marker = "",
+            tmpMkr = this.markers + " ", // add a space for format check below
             filterString = window.Application.filterList + " \\aim_ \\aim_e", // AIM 1.9 - AIM's 2 filters
             newID = window.Application.generateUUID(),
             hasSpecialText = false,
@@ -77,36 +80,54 @@ define(function (require) {
             if (isUnderlined === true) {
                 result += " fmt_u";
             }
+            if (isSmallCaps === true) {
+                result += " fmt_sc";
+            }
+            if (isSuperscript === true) {
+                result += " fmt_sup";
+            }
             // done -- turn off the filtering flag and exit
             filtered = false;
             filterID = ""; // no longer filtering
             return new Handlebars.SafeString(result);
         }
         // check for char formatting markers
-        if (this.markers.indexOf("\\bd") > -1) {
+        if (tmpMkr.indexOf("\\bd ") > -1) {
             result += " fmt_b";
             isBold = true;
         } else {
             isBold = false;
         }
-        if (this.markers.indexOf("\\it") > -1) {
+        if (tmpMkr.indexOf("\\it ") > -1) {
             result += " fmt_i";
             isItalic = true;
         } else {
             isItalic = false;
         }
-        if (this.markers.indexOf("\\em") > -1) {
+        if (tmpMkr.indexOf("\\em ") > -1) {
             result += " fmt_u";
             isUnderlined = true;
         } else {
             isUnderlined = false;
         }
-        if (this.markers.indexOf("\\bdit") > -1) {
+        if (tmpMkr.indexOf("\\bdit ") > -1) {
             // USFM has a combo bold/italic marker - set the bold and italic classes
             result += " fmt_b fmt_i";
             isUnderlined = true;
             isBold = true;
         } 
+        if (tmpMkr.indexOf("\\sc ") > -1) {
+            result += " fmt_sc";
+            isSmallCaps = true;
+        } else {
+            isSmallCaps = false;
+        }
+        if (tmpMkr.indexOf("\\sup ") > -1) {
+            result += " fmt_sup";
+            isSuperscript = true;
+        } else {
+            isSuperscript = false;
+        }
         // loop through the marker array
         for (i = 0; i < ary.length; i++) {
             if (i > 0) {
