@@ -3019,6 +3019,7 @@ define(function (require) {
 
                             // **all other HTML tags**
                             // prepended with a \\_ht_<tagname>
+                            case "a":
                             case "abbreviation":
                             case "acronym":
                             case "address":
