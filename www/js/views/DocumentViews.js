@@ -2940,21 +2940,26 @@ define(function (require) {
                             case "th":
                             case "thead":
                                 markers += "\\th ";
+                                arrClosing.push("*"); // no closing tag
                                 break;
 
                             case "tr": // note: the first tr in USFM denotes the start of a table (so no \\table marker)
                                 markers += "\\tr ";
+                                arrClosing.push("*"); // no closing tag
                                 break;
 
                             case "li":
                                 markers += "\\li" + ul + " ";
+                                arrClosing.push("*"); // no closing tag
                                 break;
 
                             case "break":
                                 markers += "\\b ";
+                                arrClosing.push("*"); // no closing tag
                                 break;
                             case "img":
                                 markers += "\\fig " + element.alt + "|src=\"" + element.src + "\" size=\"col\" ref=\" \" \\fig*";
+                                arrClosing.push("*"); // no closing tag
                                 // skip the rest of this element (and children)
                                 break;
                             // character stylings -- discouraged usfm, but still valid
@@ -2974,25 +2979,32 @@ define(function (require) {
                                 break;
                             // headings
                             case "h1":
-                                markers += "\\mt1 "; // no closing marker
+                                markers += "\\mt1 "; 
+                                arrClosing.push("*"); // no closing tag
                                 break;
                             case "h2":
-                                markers += "\\mt2 "; // no closing marker
+                                markers += "\\mt2 "; 
+                                arrClosing.push("*"); // no closing tag
                                 break;
                             case "h3":
-                                markers += "\\mt3 "; // no closing marker
+                                markers += "\\mt3 "; 
+                                arrClosing.push("*"); // no closing tag
                                 break;
                             case "h4":
-                                markers += "\\mt4 "; // no closing marker
+                                markers += "\\mt4 "; 
+                                arrClosing.push("*"); // no closing tag
                                 break;
                             case "h5":
-                                markers += "\\mt5 "; // no closing marker
+                                markers += "\\mt5 "; 
+                                arrClosing.push("*"); // no closing tag
                                 break;
                             case "h6":
-                                markers += "\\mt6 "; // no closing marker
+                                markers += "\\mt6 "; 
+                                arrClosing.push("*"); // no closing tag
                                 break;
                             case "p":
-                                markers += "\\p "; // no closing marker
+                                markers += "\\p "; 
+                                arrClosing.push("*"); // no closing tag
                                 break;
 
                             case "aside":
@@ -3127,9 +3139,11 @@ define(function (require) {
                                     ul++;
                                 }
                                 // add a closing tag UNLESS we're looking at a void HTML element
-                                // (one that doesn't have a close tag -- <hr> for example)
+                                // (one that doesn't have a closing tag -- <hr> for example)
                                 if (!voidElts.includes(htmlTag)) {
                                     arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                } else {
+                                    arrClosing.push("*"); // no closing tag
                                 }
                                 if ($(element)[0].attributes.length > 0) {
                                     // this tag has attributes -- add them to the sourcephrase
@@ -3225,6 +3239,7 @@ define(function (require) {
                                     }
                                 }
                             }
+                            return; // text node complete
                         }
                         // recurse into children
                         if ($(element).contents().length > 0) {
@@ -3239,7 +3254,11 @@ define(function (require) {
                             if (strClose.indexOf("\\ul") > -1) {
                                 ul--; // lower the indent level
                             }
-                            markers += strClose + " "; 
+                            if (strClose !== "*") {
+                                // we use the special char * to denote a node with no closing tag, to keep
+                                // the stack matched. Since this is a _real_ closing tag, add it to the markers
+                                markers += strClose + " "; 
+                            }
                         }
                     };
 
