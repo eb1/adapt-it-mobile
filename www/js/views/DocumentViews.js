@@ -2924,7 +2924,6 @@ define(function (require) {
                     var chapterName = "";
                     var nodeStyle = "";
                     var arrClosing = [];
-                    var ul = 0; // for tracking \\li# marker level
                     var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
                     console.log("Reading HTML file:" + fileName);
                     var parseNode = function (element) {
@@ -2937,22 +2936,6 @@ define(function (require) {
 
                             // **HTML** tags with a direct mapping to a USFM marker 
                             // - these get converted to usfm
-                            case "th":
-                            case "thead":
-                                markers += "\\th ";
-                                arrClosing.push("*"); // no closing tag
-                                break;
-
-                            case "tr": // note: the first tr in USFM denotes the start of a table (so no \\table marker)
-                                markers += "\\tr ";
-                                arrClosing.push("*"); // no closing tag
-                                break;
-
-                            case "li":
-                                markers += "\\li" + ul + " ";
-                                arrClosing.push("*"); // no closing tag
-                                break;
-
                             case "break":
                                 markers += "\\b ";
                                 arrClosing.push("*"); // no closing tag
@@ -3079,6 +3062,7 @@ define(function (require) {
                             case "label":
                             case "legend":
                             case "list":
+                            case "li":
                             case "main":
                             case "mark":
                             case "marquee":
@@ -3117,6 +3101,8 @@ define(function (require) {
                             case "summary":
                             case "svg":
                             case "table":
+                            case "th":
+                            case "thead":
                             case "tbody":
                             case "td":
                             case "template":
@@ -3135,10 +3121,6 @@ define(function (require) {
                                 // build a marker containing the name and attributes (if any)
                                 // for this HTML tag
                                 htmlTag = $(element)[0].tagName.toLowerCase();
-                                // special case -- li in usfm has an indent level
-                                if (htmlTag === "ul") {
-                                    ul++;
-                                }
                                 // add a closing tag UNLESS we're looking at a void HTML element
                                 // (one that doesn't have a closing tag -- <hr> for example)
                                 if (!voidElts.includes(htmlTag)) {
@@ -3252,9 +3234,6 @@ define(function (require) {
                         // so it gets picked up in the next sourcephrase
                         if (arrClosing.length > 0) {
                             var strClose = arrClosing.pop();
-                            if (strClose.indexOf("\\ul") > -1) {
-                                ul--; // lower the indent level
-                            }
                             if (strClose !== "*") {
                                 // we use the special char * to denote a node with no closing tag, to keep
                                 // the stack matched. Since this is a _real_ closing tag, add it to the markers
