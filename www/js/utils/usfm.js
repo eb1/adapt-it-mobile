@@ -2413,22 +2413,6 @@ define(function (require) {
                 description: "Hidden Note",
                 filter: "1",
                 userCanSetFilter: "0"
-            },
-            {
-                name: "aim_",
-                endMarker: "aim_*",
-                type: "para",
-                description: "Plain text for round-tripping (e.g., markup that AIM doesn't support)",
-                filter: "1",
-                userCanSetFilter: "0"
-            },
-            {
-                name: "aim_e",
-                endMarker: "aim_e*",
-                type: "para",
-                description: "UUEncoded text for round-tripping (e.g., scripts)",
-                filter: "1",
-                userCanSetFilter: "0"
             }
         ],
 
