@@ -5083,8 +5083,15 @@ define(function (require) {
                                 markers = value.get("markers");
                                 if (markers !== "") {
                                     // marker processing
-                                    if (markers.indexOf("\\_ht_") > -1) {
+                                    var tmpMarkers = "";
+                                    if (markers.indexOf("_ht_") > -1) {
                                         // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                        markers.split(" ").forEach(function (marker) {
+                                            if (marker.indexOf("_ht_") === -1) {
+                                                tmpMarkers += marker + " ";
+                                            }
+                                        });
+                                        markers = tmpMarkers;
                                     }
                                     markers += " "; // add trailing space to handle last marker
                                     // check to see if this sourcephrase is filtered (only looking at the top level)
