@@ -3135,7 +3135,7 @@ define(function (require) {
                                 })
                                 }
                                 // add the marker
-                                markers += "\\_ht_" + htmlTag;
+                                markers += "\\_ht_" + htmlTag + " ";
                                 break;
 
                             default:
@@ -5064,6 +5064,7 @@ define(function (require) {
                 var bDirty = false;
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
                 var lastSPID = window.Application.currentBookmark.get('spid');
+                var tmpMarkers = "";
                 console.log("buildUSFM: entry");
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -5081,18 +5082,20 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
+                                // now are there any markers to export?
                                 if (markers !== "") {
                                     // marker processing
-                                    var tmpMarkers = "";
-                                    if (markers.indexOf("_ht_") > -1) {
-                                        // this came from a Markdown or HTML import -- remove any _ht_ markers
-                                        markers.split(" ").forEach(function (marker) {
-                                            if (marker.indexOf("_ht_") === -1) {
-                                                tmpMarkers += marker + " ";
-                                            }
-                                        });
-                                        markers = tmpMarkers;
-                                    }
                                     markers += " "; // add trailing space to handle last marker
                                     // check to see if this sourcephrase is filtered (only looking at the top level)
                                     if (filtered === false) {
