@@ -6772,6 +6772,12 @@ define(function (require) {
                     case FileTypeEnum.TXT:
                         bResult = buildText();
                         break;
+                    case FileTypeEnum.MD:
+                        bResult = buildMarkdown();
+                        break;
+                    case FileTypeEnum.HTML:
+                        bResult = buildHTML();
+                        break;
                     case FileTypeEnum.USFM:
                         // User could be exporting the translation, gloss, or free translation
                         if (content === contentEnum.GLOSS) {
@@ -6859,6 +6865,12 @@ define(function (require) {
                                 switch (format) {
                                 case FileTypeEnum.TXT:
                                     bResult = buildText();
+                                    break;
+                                case FileTypeEnum.MD:
+                                    bResult = buildMarkdown();
+                                    break;
+                                case FileTypeEnum.HTML:
+                                    bResult = buildHTML();
                                     break;
                                 case FileTypeEnum.USFM:
                                     // User could be exporting the translation, gloss, or free translation
@@ -7443,6 +7455,10 @@ define(function (require) {
                             format = FileTypeEnum.USX;
                         } else if ($("#buildUSFM").is(":checked")) {
                             format = FileTypeEnum.USFM;
+                        } else if ($("#buildMD").is(":checked")) {
+                            format = FileTypeEnum.MD;
+                        } else if ($("#buildHTML").is(":checked")) {
+                            format = FileTypeEnum.HTML;
                         } else if ($("#buildKBXMLXML").is(":checked")) {
                             format = FileTypeEnum.KBXML;
                         } else if ($("#buildKBXMLTMX").is(":checked")) {

@@ -255,6 +255,8 @@
         "lblbuildUSFM": "Paratext / Bibledit (.sfm)",
         "lblbuildUSX": "Paratext (.usx)",
         "lblbuildText": "Plain Text (.txt)",
+        "lblbuildMarkdown": "Markdown (.md)",
+        "lblbuildHTML": "HTML (.htm)",
         "lblExportFilename": "Fail nem:",
         "lblDocSelected": "Buk: ",
         "errNoFilename": "Plis taipim gutpela fail nem.",

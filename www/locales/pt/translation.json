@@ -255,6 +255,8 @@
         "lblbuildUSFM": "Paratext / Bibledit (.sfm)",
         "lblbuildUSX": "Paratext (.usx)",
         "lblbuildText": "Texto (.txt)",
+        "lblbuildMarkdown": "Markdown (.md)",
+        "lblbuildHTML": "HTML (.htm)",
         "lblExportFilename": "Nome do arquivo:",
         "lblDocSelected": "Documento selecionado: ",
         "errNoFilename": "Por favor insira um nome de arquivo.",
