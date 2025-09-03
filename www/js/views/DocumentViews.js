@@ -4900,7 +4900,7 @@ define(function (require) {
                 }
             };
 
-            var buildMD = function () {
+            var buildMarkdown = function () {
                 var chapters = window.Application.ChapterList.where({bookid: bookid});
                 var spList = new spModel.SourcePhraseCollection();
                 var markerList = new USFM.MarkerCollection();
@@ -4914,6 +4914,8 @@ define(function (require) {
                 var needsEndMarker = "";
                 var mkr = "";
                 var bDirty = false;
+                var bBlockquote = false;
+                var bCodeBlock = false;
                 // get the chapters belonging to our book
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -4935,37 +4937,63 @@ define(function (require) {
                                     // add line breaks for chapter, verse, paragraph marks
                                     if ((value.get("markers").indexOf("\\c") > -1) || (value.get("markers").indexOf("\\v") > -1) ||
                                             (value.get("markers").indexOf("\\h") > -1) || (value.get("markers").indexOf("\\p") > -1) ||
-                                            (value.get("markers").indexOf("\\mt") > -1) || (value.get("markers").indexOf("\\li") > -1)) {
+                                            (value.get("markers").indexOf("\\mt") > -1) || (value.get("markers").indexOf("\\li") > -1) ||
+                                            (value.get("markers").indexOf("\\_ht_li") > -1) || (value.get("markers").indexOf("\\li") > -1)) {
                                         chapterString += "\n"; // newline
                                     }
+                                    if (value.get("markers").indexOf("\\_ht_blockquote ") > -1) {
+                                        bBlockquote = true;
+                                        chapterString += "\n"; // opening blockquote
+                                    }
+                                    if (value.get("markers").indexOf("\\_ht_blockquote*") > -1) {
+                                        bBlockquote = false;
+                                    }
+                                    if (bBlockquote === true) {
+                                        chapterString += "> ";
+                                    }
+                                    // code blocks (indented)
+                                    if (value.get("markers").indexOf("\\_ht_pre ") > -1) {
+                                        bCodeBlock = true;
+                                        chapterString += "\n";
+                                    }
+                                    if (value.get("markers").indexOf("\\_ht_pre* ") > -1) {
+                                        bCodeBlock = false;
+                                    }
+                                    if (bCodeBlock === true) {
+                                        chapterString += "    ";
+                                    }
+                                    // inline code / monospace 
+                                    if ((value.get("markers").indexOf("\\ht_code ") > -1) && (bCodeBlock === false)) {
+                                        chapterString += "`";
+                                    }
                                     if (value.get("markers").indexOf("\\mt1") > -1) {
-                                        chapterString += "# "; // h1
+                                        chapterString += "\n# "; // h1
                                     }
                                     if (value.get("markers").indexOf("\\mt2") > -1) {
-                                        chapterString += "## "; // h2
+                                        chapterString += "\n## "; // h2
                                     }
                                     if (value.get("markers").indexOf("\\mt3") > -1) {
-                                        chapterString += "### "; // h3
+                                        chapterString += "\n### "; // h3
                                     }
                                     if (value.get("markers").indexOf("\\mt4") > -1) {
-                                        chapterString += "#### "; // h4
+                                        chapterString += "\n#### "; // h4
                                     }
                                     if (value.get("markers").indexOf("\\mt5") > -1) {
-                                        chapterString += "##### "; // h5
+                                        chapterString += "\n##### "; // h5
                                     }
                                     if (value.get("markers").indexOf("\\mt6") > -1) {
-                                        chapterString += "###### "; // h6
+                                        chapterString += "\n###### "; // h6
                                     }
                                     if (value.get("markers").indexOf("\\hr ") > -1) {
-                                        chapterString += "***"; // hr
+                                        chapterString += "\n***\n"; // hr
                                     }
                                     if (value.get("markers").indexOf("\\bd ") > -1) {
-                                        chapterString += "*"; // bd
+                                        chapterString += "**"; // bd
                                     }
                                     if (value.get("markers").indexOf("\\it ") > -1) {
-                                        chapterString += "**"; // it
+                                        chapterString += "*"; // it
                                     }
-                                    if ((value.get("markers").indexOf("\\_ht_li") > -1) || 
+                                    if ((value.get("markers").indexOf("\\_ht_li ") > -1) || 
                                         (value.get("markers").indexOf("\\li") > -1)) {
                                         chapterString += "    * "; // li
                                     }
@@ -7411,12 +7439,21 @@ define(function (require) {
                     bOperationDone = false;
                     window.history.go(-1);
                 } else {
+                    // if we happen to have a filename extension on the book name, remove it now
+                    if ((filename.indexOf(".xml") > -1) || (filename.indexOf(".txt") > -1) || (filename.indexOf(".sfm") > -1) || (filename.indexOf(".usx") > -1) ||
+                        (filename.indexOf(".usfm") > -1) || (filename.indexOf(".md") > -1) || (filename.indexOf(".htm") > -1) || (filename.indexOf(".html") > -1)) {
+                        filename = filename.substring(0, filename.lastIndexOf("."));
+                    }
                     var format = FileTypeEnum.TXT;
                     // build the suggested filename based on the file type
                     if ($("#buildAIDocXML").is(":checked")) {
                         filename += ".xml";
                     } else if ($("#buildUSX").is(":checked")) {
                         filename += ".usx";
+                    } else if ($("#buildMD").is(":checked")) {
+                        filename += ".md";
+                    } else if ($("#buildHTML").is(":checked")) {
+                        filename += ".html";
                     } else if ($("#buildUSFM").is(":checked")) {
                         filename += ".sfm";
                     } else if ($("#buildKBXMLTMX").is(":checked")) {
@@ -7561,15 +7598,16 @@ define(function (require) {
                     // Is the "show gloss and FT" check selected?
                     if (localStorage.getItem("ShowGlossFT") && localStorage.getItem("ShowGlossFT") === "true") {
                         console.log("User has gloss/FT enabled -- need to ask what they want to export");
-                        // "show gloss and FT" is selected -- user might want to export the gloaa or FT instead of the document
+                        // "show gloss and FT" is selected -- user might want to export the gloss or FT instead of the document
                         // Now show the Export Content page to find out what they want to export from this document
                         // show the next screen
                         $("#lblExportDirections").html(i18n.t('view.lblSelectContent'));
                         $("#Container").html(Handlebars.compile(tplExportContent));
                         // remove any file extension found on the book name
                         if (bookName.length > 0) {
-                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1)) {
-                                bookName = bookName.substr(0, bookName.length - 4);
+                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1) ||
+                                (bookName.indexOf(".usfm") > -1) || (bookName.indexOf(".md") > -1) || (bookName.indexOf(".htm") > -1) || (bookName.indexOf(".html") > -1)) {
+                                bookName = bookName.substring(0, bookName.lastIndexOf("."));
                             }
                         }
                     } else {
@@ -7583,8 +7621,9 @@ define(function (require) {
                         }
                         // remove any file extension on the book name
                         if (bookName.length > 0) {
-                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1)) {
-                                bookName = bookName.substr(0, bookName.length - 4);
+                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1) ||
+                                (bookName.indexOf(".usfm") > -1) || (bookName.indexOf(".md") > -1) || (bookName.indexOf(".htm") > -1) || (bookName.indexOf(".html") > -1)) {
+                                bookName = bookName.substring(0, bookName.lastIndexOf("."));
                             }
                         }
                         // select a default of TXT for the export format (for now)
