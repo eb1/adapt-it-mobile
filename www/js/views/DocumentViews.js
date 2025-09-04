@@ -8,7 +8,8 @@ define(function (require) {
 
     "use strict";
 
-    const   spaceRE     = /\s+/,            // select 1+ space chars
+    const   ONE_SPACE   = " ",
+            spaceRE     = /\s+/,            // select 1+ space chars
             nonSpaceRE  = /[^\s+]/,         // select 1+ non-space chars
             CRLF_RE     = /(\r\n|\r|\n)/g,  // select all CRLF variants
             GspaceRE    = /\s+/g;           // globally select all 1+ space chars
@@ -4916,6 +4917,7 @@ define(function (require) {
                 var bDirty = false;
                 var bBlockquote = false;
                 var bCodeBlock = false;
+                var arrList = [];
                 // get the chapters belonging to our book
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -4934,6 +4936,18 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 if (value.get("markers").length > 0) {
+                                    // add any inline closing char formats before a space
+                                    // (requires us to call trim() on the string)
+                                    if (value.get("markers").indexOf("\\bd* ") > -1) {
+                                        chapterString = chapterString.trim() + "** "; // bd
+                                    }
+                                    if (value.get("markers").indexOf("\\it* ") > -1) {
+                                        chapterString = chapterString.trim() + "* "; // it
+                                    }
+                                    // inline code / monospace 
+                                    if ((value.get("markers").indexOf("\\_ht_code* ") > -1) && (bCodeBlock === false)) {
+                                        chapterString = chapterString.trim() + "` ";
+                                    }
                                     // add line breaks for chapter, verse, paragraph marks
                                     if ((value.get("markers").indexOf("\\c") > -1) || (value.get("markers").indexOf("\\v") > -1) ||
                                             (value.get("markers").indexOf("\\h") > -1) || (value.get("markers").indexOf("\\p") > -1) ||
@@ -4941,12 +4955,31 @@ define(function (require) {
                                             (value.get("markers").indexOf("\\_ht_li") > -1) || (value.get("markers").indexOf("\\li") > -1)) {
                                         chapterString += "\n"; // newline
                                     }
+                                    if (value.get("markers").indexOf("\\_ht_ul ") > -1) {
+                                        arrList.push(0);
+                                        chapterString += "\n"; // opening list
+                                    }
+                                    if (value.get("markers").indexOf("\\_ht_ol ") > -1) {
+                                        arrList.push(1);
+                                        chapterString += "\n"; // opening list
+                                    }
+                                    if (value.get("markers").indexOf("\\_ht_ul* ") > -1) {
+                                        // close out list
+                                        arrList.pop();
+                                        chapterString += "\n";
+                                    }
+                                    if (value.get("markers").indexOf("\\_ht_ol* ") > -1) {
+                                        // close out list
+                                        arrList.pop();
+                                        chapterString += "\n";
+                                    }
                                     if (value.get("markers").indexOf("\\_ht_blockquote ") > -1) {
                                         bBlockquote = true;
                                         chapterString += "\n"; // opening blockquote
                                     }
                                     if (value.get("markers").indexOf("\\_ht_blockquote*") > -1) {
                                         bBlockquote = false;
+                                        chapterString += "\n";
                                     }
                                     if (bBlockquote === true) {
                                         chapterString += "> ";
@@ -4958,12 +4991,13 @@ define(function (require) {
                                     }
                                     if (value.get("markers").indexOf("\\_ht_pre* ") > -1) {
                                         bCodeBlock = false;
+                                        chapterString += "\n";
                                     }
                                     if (bCodeBlock === true) {
                                         chapterString += "    ";
                                     }
                                     // inline code / monospace 
-                                    if ((value.get("markers").indexOf("\\ht_code ") > -1) && (bCodeBlock === false)) {
+                                    if ((value.get("markers").indexOf("\\_ht_code ") > -1) && (bCodeBlock === false)) {
                                         chapterString += "`";
                                     }
                                     if (value.get("markers").indexOf("\\mt1") > -1) {
@@ -4993,11 +5027,23 @@ define(function (require) {
                                     if (value.get("markers").indexOf("\\it ") > -1) {
                                         chapterString += "*"; // it
                                     }
-                                    if ((value.get("markers").indexOf("\\_ht_li ") > -1) || 
-                                        (value.get("markers").indexOf("\\li") > -1)) {
-                                        chapterString += "    * "; // li
+                                    if (value.get("markers").indexOf("\\li") > -1) {
+                                        chapterString += "  * "; // li from usfm -- just make a ul
                                     }
-
+                                    if (value.get("markers").indexOf("\\_ht_li ") > -1) {
+                                        // possibly nested -- add spaces if needed
+                                        if (arrList.length > 1) {
+                                            chapterString += "    ".repeat(arrList.length - 1);
+                                        }
+                                        // could be an ordered or unordered list -- find out which one
+                                        if (arrList[arrList.length - 1] === 0) {
+                                            // unordered list
+                                            chapterString += "  * "; // unordered li
+                                        } else {
+                                            // ordered list
+                                            chapterString += " 1. "; // ordered li
+                                        }
+                                    }
                                 }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
                                 if (filtered === false) {
@@ -5026,7 +5072,7 @@ define(function (require) {
                                 if (filtered === false) {
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("target").length > 0) {
-                                        chapterString += value.get("target") + " ";
+                                        chapterString += value.get("target") + ONE_SPACE;
                                     }
                                 }
                                 if (value.get('spid') === lastSPID) {
