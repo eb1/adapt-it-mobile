@@ -2925,6 +2925,7 @@ define(function (require) {
                     var chapterName = "";
                     var nodeStyle = "";
                     var arrClosing = [];
+                    var bCodeBlock = false;
                     var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
                     console.log("Reading HTML file:" + fileName);
                     var parseNode = function (element) {
@@ -3122,6 +3123,9 @@ define(function (require) {
                                 // build a marker containing the name and attributes (if any)
                                 // for this HTML tag
                                 htmlTag = $(element)[0].tagName.toLowerCase();
+                                if (htmlTag === "code") {
+                                    bCodeBlock = true;
+                                }
                                 // add a closing tag UNLESS we're looking at a void HTML element
                                 // (one that doesn't have a closing tag -- <hr> for example)
                                 if (!voidElts.includes(htmlTag)) {
@@ -3149,20 +3153,68 @@ define(function (require) {
                         if ($(element)[0].nodeType === Node.TEXT_NODE) {
                             // Split the text into an array
                             // Note that this is analogous to the AI "strip" of text, and not the whole document
-                            arr = ($(element)[0].nodeValue).trim().split(spaceRE);
-                            arrSP = ($(element)[0].nodeValue).trim().split(nonSpaceRE);
+                            arr = ($(element)[0].nodeValue).replace(newline, " <p> ").trim().split(spaceRE);
+                            arrSP = ($(element)[0].nodeValue).replace(newline, " <p> ").trim().split(nonSpaceRE);  // do the inverse (keep spaces)
+                            // arr = ($(element)[0].nodeValue).trim().split(spaceRE);
+                            // arrSP = ($(element)[0].nodeValue).trim().split(nonSpaceRE);
                             i = 0;
                             while (i < arr.length) {
                                 // check for a marker
                                 if (arr[i].length === 0) {
                                     // nothing in this token -- skip
                                     i++;
+                                } else if (bCodeBlock === true) {
+                                    // inside a code block, almost everything is treated as a source phrase
+                                    // newlines are the exception
+                                    s = arr[i];
+                                    if (arr[i] === "<p>") {
+                                        // newline -- make a note and keep going
+                                        markers += "\\p ";
+                                        i++;
+                                    } else {
+                                        spID = window.Application.generateUUID();
+                                        sp = new spModel.SourcePhrase({
+                                            spid: spID,
+                                            norder: norder,
+                                            chapterid: chapterID,
+                                            vid: verseID,
+                                            markers: markers,
+                                            orig: null,
+                                            prepuncts: "",
+                                            midpuncts: "",
+                                            follpuncts: "",
+                                            srcwordbreak: arrSP[i],
+                                            source: s,
+                                            target: ""
+                                        });
+                                        markers = "";
+                                        prepuncts = "";
+                                        follpuncts = "";
+                                        punctIdx = 0;
+                                        index++;
+                                        norder++;
+                                        sps.push(sp);
+                                        // if necessary, send the next batch of SourcePhrase INSERT transactions
+                                        if ((sps.length % MAX_BATCH) === 0) {
+                                            batchesSent++;
+                                            updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailChapterVerse", {chap: chapterName, verse: -(index)})}), 0);
+                                            deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - MAX_BATCH)));
+                                            deferreds[deferreds.length - 1].done(function() {
+                                                updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
+                                            });        
+                                        }
+                                        i++;
+                                    }
+                                } else if (arr[i] === "<p>") {
+                                    // newline -- make a note and keep going
+                                    markers += "\\p ";
+                                    i++;
                                 } else if (arr[i].length === 1 && puncts.indexOf(arr[i]) > -1) {
                                     // punctuation token -- add to the prepuncts
                                     prepuncts += arr[i];
                                     i++;
                                 } else {
-                                    // "normal" sourcephrase token
+                                    // "normal" sourcephrase token, or a code block
                                     s = arr[i];
                                     // look for leading and trailing punctuation
                                     // leading...
@@ -3213,7 +3265,7 @@ define(function (require) {
                                         // if necessary, send the next batch of SourcePhrase INSERT transactions
                                         if ((sps.length % MAX_BATCH) === 0) {
                                             batchesSent++;
-                                            updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailChapterVerse", {chap: chapterName, verse: verseCount})}), 0);
+                                            updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailChapterVerse", {chap: chapterName, verse: -(index)})}), 0);
                                             deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - MAX_BATCH)));
                                             deferreds[deferreds.length - 1].done(function() {
                                                 updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
@@ -3238,7 +3290,11 @@ define(function (require) {
                             if (strClose !== "*") {
                                 // we use the special char * to denote a node with no closing tag, to keep
                                 // the stack matched. Since this is a _real_ closing tag, add it to the markers
-                                markers += strClose + " "; 
+                                markers += strClose + " ";
+                                if (strClose.indexOf("ht_code") > -1) {
+                                    // no longer in a code block
+                                    bCodeBlock = false;
+                                }
                             }
                         }
                     };
