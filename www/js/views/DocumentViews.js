@@ -3207,7 +3207,7 @@ define(function (require) {
                                     }
                                 } else if (arr[i] === "<p>") {
                                     // newline -- make a note and keep going
-                                    markers += "\\p ";
+                                    // markers += "\\p ";
                                     i++;
                                 } else if (arr[i].length === 1 && puncts.indexOf(arr[i]) > -1) {
                                     // punctuation token -- add to the prepuncts
@@ -5000,11 +5000,19 @@ define(function (require) {
                                         if (markerAry[j].length > 0) {
                                             switch (markerAry[j]) {
                                                 // newline (only)
-                                                case "\\p":
                                                 case "\\c":
                                                 case "\\v":
                                                 case "\\h":
-                                                    chapterString += "\n";
+                                                    chapterString += "\n\n";
+                                                    break;
+                                                case "\\p":
+                                                    // if we're in a codeblock or a block quote, newline is just a newline;
+                                                    // if not, separate the paragraphs by a blank line
+                                                    if ((bCodeBlock === true) || (bBlockquote === true)) {
+                                                        chapterString += "\n"; 
+                                                    } else {
+                                                        chapterString += "\n\n";
+                                                    }
                                                     break;
                                                 case "\\bd":
                                                     chapterString += "**";
@@ -5021,6 +5029,8 @@ define(function (require) {
                                                 case "\\_ht_code":
                                                     if (bCodeBlock === false) {
                                                         chapterString += "`";
+                                                    } else {
+                                                        chapterString += "\n";
                                                     }
                                                     break;
                                                 case "\\_ht_code*":
@@ -5058,25 +5068,25 @@ define(function (require) {
                                                     chapterString += "\n";
                                                     break;
                                                 case "\\mt1":
-                                                    chapterString += "\n# "; // h1
+                                                    chapterString += "\n\n# "; // h1
                                                     break;
                                                 case "\\mt2":
-                                                    chapterString += "\n## "; // h2
+                                                    chapterString += "\n\n## "; // h2
                                                     break;
                                                 case "\\mt3":
-                                                    chapterString += "\n### "; // h3
+                                                    chapterString += "\n\n### "; // h3
                                                     break;
                                                 case "\\mt4":
-                                                    chapterString += "\n#### "; // h4
+                                                    chapterString += "\n\n#### "; // h4
                                                     break;
                                                 case "\\mt5":
-                                                    chapterString += "\n##### "; // h5
+                                                    chapterString += "\n\n##### "; // h5
                                                     break;
                                                 case "\\mt6":
-                                                    chapterString += "\n###### "; // h6
+                                                    chapterString += "\n\n###### "; // h6
                                                     break;
                                                 case "\\_ht_hr":
-                                                    chapterString += "\n***\n"; // hr
+                                                    chapterString += "\n\n***\n"; // hr
                                                     break;
                                                 case "\\li":
                                                     chapterString += "\n  * "; // li from usfm -- just make a ul
@@ -5100,21 +5110,24 @@ define(function (require) {
                                                     break; // do nothing
                                                 default:
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
-                                                        // some other closing html
-                                                        chapterString += "</" + markerAry[j].substring(5, markerAry[j].length - 1) + "> ";
+                                                        // some other closing html tag
+                                                        chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
-                                                        // some other opening html
+                                                        // some other opening html tag
                                                         chapterString += "<";
                                                         // are there any HTML attributes we need to parse?
                                                         if (markerAry[j].indexOf("|") > -1) {
                                                             // yes - iterate through the attributes
-                                                            chapterString += markerAry[j].substring(5, markerAry[j].indexOf("|") + " ");
-
+                                                            chapterString += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
+                                                            var aryAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1).split("|");
+                                                            for (var k = 0; k < aryAtts.length; k++) {
+                                                                chapterString += decodeURIComponent(aryAtts[k]) + " ";
+                                                            }
                                                         } else {
                                                             // no - plain html marker
-                                                            chapterString += markerAry[j].substring(5);
+                                                            chapterString = chapterString.trim() + markerAry[j].substring(5);
                                                         }
-                                                        chapterString += "> ";
+                                                        chapterString = chapterString.trim() + ">";
                                                     } else {
                                                         console.log("unknown tag: " + markerAry[j]);
 
