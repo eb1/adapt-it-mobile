@@ -4962,6 +4962,7 @@ define(function (require) {
                 var spList = new spModel.SourcePhraseCollection();
                 var markerList = new USFM.MarkerCollection();
                 var i = 0;
+                var j = 0;
                 var idxFilters = 0;
                 var value = null;
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
@@ -4974,6 +4975,7 @@ define(function (require) {
                 var bBlockquote = false;
                 var bCodeBlock = false;
                 var arrList = [];
+                var markerAry = [];
                 // get the chapters belonging to our book
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -4992,113 +4994,141 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 if (value.get("markers").length > 0) {
-                                    // add any inline closing char formats before a space
-                                    // (requires us to call trim() on the string)
-                                    if (value.get("markers").indexOf("\\bd* ") > -1) {
-                                        chapterString = chapterString.trim() + "** "; // bd
+                                    markerAry = value.get("markers").split(" ");
+                                    console.log("buildMarkdown - unfiltered markers: " + markerAry.length + " ("+ value.get("markers") + ")");
+                                    for (j = 0; j < markerAry.length; j++) {
+                                        if (markerAry[j].length > 0) {
+                                            switch (markerAry[j]) {
+                                                // newline (only)
+                                                case "\\p":
+                                                case "\\c":
+                                                case "\\v":
+                                                case "\\h":
+                                                    chapterString += "\n";
+                                                    break;
+                                                case "\\bd":
+                                                    chapterString += "**";
+                                                    break;
+                                                case "\\bd*":
+                                                    chapterString = chapterString.trim() + "** ";
+                                                    break;
+                                                case "\\it":
+                                                    chapterString += "*";
+                                                    break;
+                                                case "\\it*":
+                                                    chapterString = chapterString.trim() + "* ";
+                                                    break;
+                                                case "\\_ht_code":
+                                                    if (bCodeBlock === false) {
+                                                        chapterString += "`";
+                                                    }
+                                                    break;
+                                                case "\\_ht_code*":
+                                                    if (bCodeBlock === false) {
+                                                        chapterString = chapterString.trim() + "` ";
+                                                    }
+                                                    break;
+                                                case "\\_ht_ul":
+                                                    arrList.push(0);
+                                                    chapterString += "\n"; // opening list
+                                                    break;
+                                                case "\\_ht_ol":
+                                                    arrList.push(1);
+                                                    chapterString += "\n"; // opening list
+                                                    break;
+                                                case "\\_ht_ul*":
+                                                case "\\_ht_ol*":
+                                                    arrList.pop();
+                                                    chapterString += "\n";
+                                                    break;
+                                                case "\\_ht_blockquote":
+                                                    bBlockquote = true;
+                                                    chapterString += "\n"; // opening blockquote
+                                                    break;
+                                                case "\\_ht_blockquote*":
+                                                    bBlockquote = false;
+                                                    chapterString += "\n";
+                                                    break;
+                                                case "\\_ht_pre":
+                                                    bCodeBlock = true;
+                                                    chapterString += "\n";
+                                                    break;
+                                                case "\\_ht_pre*":
+                                                    bCodeBlock = false;
+                                                    chapterString += "\n";
+                                                    break;
+                                                case "\\mt1":
+                                                    chapterString += "\n# "; // h1
+                                                    break;
+                                                case "\\mt2":
+                                                    chapterString += "\n## "; // h2
+                                                    break;
+                                                case "\\mt3":
+                                                    chapterString += "\n### "; // h3
+                                                    break;
+                                                case "\\mt4":
+                                                    chapterString += "\n#### "; // h4
+                                                    break;
+                                                case "\\mt5":
+                                                    chapterString += "\n##### "; // h5
+                                                    break;
+                                                case "\\mt6":
+                                                    chapterString += "\n###### "; // h6
+                                                    break;
+                                                case "\\_ht_hr":
+                                                    chapterString += "\n***\n"; // hr
+                                                    break;
+                                                case "\\li":
+                                                    chapterString += "\n  * "; // li from usfm -- just make a ul
+                                                    break;
+                                                case "\\_ht_li":
+                                                    chapterString += "\n";
+                                                    // list item, possibly nested -- add spaces if needed
+                                                    if (arrList.length > 1) {
+                                                        chapterString += "    ".repeat(arrList.length - 1);
+                                                    }
+                                                    // is this for an ordered or unordered list?
+                                                    if (arrList[arrList.length - 1] === 0) {
+                                                        // unordered list
+                                                        chapterString += "  * "; // unordered li
+                                                    } else {
+                                                        // ordered list
+                                                        chapterString += " 1. "; // ordered li
+                                                    }
+                                                    break;
+                                                case "\\_ht_li*":
+                                                    break; // do nothing
+                                                default:
+                                                    if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
+                                                        // some other closing html
+                                                        chapterString += "</" + markerAry[j].substring(5, markerAry[j].length - 1) + "> ";
+                                                    } else if (markerAry[j].indexOf("\\_ht_") > -1) {
+                                                        // some other opening html
+                                                        chapterString += "<";
+                                                        // are there any HTML attributes we need to parse?
+                                                        if (markerAry[j].indexOf("|") > -1) {
+                                                            // yes - iterate through the attributes
+                                                            chapterString += markerAry[j].substring(5, markerAry[j].indexOf("|") + " ");
+
+                                                        } else {
+                                                            // no - plain html marker
+                                                            chapterString += markerAry[j].substring(5);
+                                                        }
+                                                        chapterString += "> ";
+                                                    } else {
+                                                        console.log("unknown tag: " + markerAry[j]);
+
+                                                    }
+                                                    break;
+                                            }
+                                        }
                                     }
-                                    if (value.get("markers").indexOf("\\it* ") > -1) {
-                                        chapterString = chapterString.trim() + "* "; // it
-                                    }
-                                    // inline code / monospace 
-                                    if ((value.get("markers").indexOf("\\_ht_code* ") > -1) && (bCodeBlock === false)) {
-                                        chapterString = chapterString.trim() + "` ";
-                                    }
-                                    // add line breaks for chapter, verse, paragraph marks
-                                    if ((value.get("markers").indexOf("\\c") > -1) || (value.get("markers").indexOf("\\v") > -1) ||
-                                            (value.get("markers").indexOf("\\h") > -1) || (value.get("markers").indexOf("\\p") > -1) ||
-                                            (value.get("markers").indexOf("\\mt") > -1) || (value.get("markers").indexOf("\\li") > -1) ||
-                                            (value.get("markers").indexOf("\\_ht_li") > -1) || (value.get("markers").indexOf("\\li") > -1)) {
-                                        chapterString += "\n"; // newline
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_ul ") > -1) {
-                                        arrList.push(0);
-                                        chapterString += "\n"; // opening list
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_ol ") > -1) {
-                                        arrList.push(1);
-                                        chapterString += "\n"; // opening list
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_ul* ") > -1) {
-                                        // close out list
-                                        arrList.pop();
-                                        chapterString += "\n";
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_ol* ") > -1) {
-                                        // close out list
-                                        arrList.pop();
-                                        chapterString += "\n";
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_blockquote ") > -1) {
-                                        bBlockquote = true;
-                                        chapterString += "\n"; // opening blockquote
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_blockquote*") > -1) {
-                                        bBlockquote = false;
-                                        chapterString += "\n";
-                                    }
+                                    // continue any multi-line formatting
                                     if (bBlockquote === true) {
                                         chapterString += "> ";
                                     }
-                                    // code blocks (indented)
-                                    if (value.get("markers").indexOf("\\_ht_pre ") > -1) {
-                                        bCodeBlock = true;
-                                        chapterString += "\n";
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_pre* ") > -1) {
-                                        bCodeBlock = false;
-                                        chapterString += "\n";
-                                    }
                                     if (bCodeBlock === true) {
                                         chapterString += "    ";
-                                    }
-                                    // inline code / monospace 
-                                    if ((value.get("markers").indexOf("\\_ht_code ") > -1) && (bCodeBlock === false)) {
-                                        chapterString += "`";
-                                    }
-                                    if (value.get("markers").indexOf("\\mt1") > -1) {
-                                        chapterString += "\n# "; // h1
-                                    }
-                                    if (value.get("markers").indexOf("\\mt2") > -1) {
-                                        chapterString += "\n## "; // h2
-                                    }
-                                    if (value.get("markers").indexOf("\\mt3") > -1) {
-                                        chapterString += "\n### "; // h3
-                                    }
-                                    if (value.get("markers").indexOf("\\mt4") > -1) {
-                                        chapterString += "\n#### "; // h4
-                                    }
-                                    if (value.get("markers").indexOf("\\mt5") > -1) {
-                                        chapterString += "\n##### "; // h5
-                                    }
-                                    if (value.get("markers").indexOf("\\mt6") > -1) {
-                                        chapterString += "\n###### "; // h6
-                                    }
-                                    if (value.get("markers").indexOf("\\hr ") > -1) {
-                                        chapterString += "\n***\n"; // hr
-                                    }
-                                    if (value.get("markers").indexOf("\\bd ") > -1) {
-                                        chapterString += "**"; // bd
-                                    }
-                                    if (value.get("markers").indexOf("\\it ") > -1) {
-                                        chapterString += "*"; // it
-                                    }
-                                    if (value.get("markers").indexOf("\\li") > -1) {
-                                        chapterString += "  * "; // li from usfm -- just make a ul
-                                    }
-                                    if (value.get("markers").indexOf("\\_ht_li ") > -1) {
-                                        // possibly nested -- add spaces if needed
-                                        if (arrList.length > 1) {
-                                            chapterString += "    ".repeat(arrList.length - 1);
-                                        }
-                                        // could be an ordered or unordered list -- find out which one
-                                        if (arrList[arrList.length - 1] === 0) {
-                                            // unordered list
-                                            chapterString += "  * "; // unordered li
-                                        } else {
-                                            // ordered list
-                                            chapterString += " 1. "; // ordered li
-                                        }
                                     }
                                 }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
