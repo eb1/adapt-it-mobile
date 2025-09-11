@@ -2915,7 +2915,7 @@ define(function (require) {
 
                 // HTML document
                 var readHTMLDoc = function(contents) {
-                    var newline = new RegExp('[\n\r\f\u2028\u2029]+', 'g');
+                    var newline = new RegExp(/\r\n|\r|\n/, 'g');
                     var voidElts = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
                     var i = 0;
                     var sp = null;
@@ -2943,7 +2943,7 @@ define(function (require) {
                                 arrClosing.push("*"); // no closing tag
                                 break;
                             case "img":
-                                markers += "\\fig " + element.alt + "|src=\"" + element.src + "\" size=\"col\" ref=\" \" \\fig*";
+                                markers += "\\fig " + element.alt + "|src=\"" + element.src + "\" size=\"col\" ref=\" \" \\fig* ";
                                 arrClosing.push("*"); // no closing tag
                                 // skip the rest of this element (and children)
                                 break;
@@ -5008,7 +5008,10 @@ define(function (require) {
                                                 case "\\p":
                                                     // if we're in a codeblock or a block quote, newline is just a newline;
                                                     // if not, separate the paragraphs by a blank line
-                                                    if ((bCodeBlock === true) || (bBlockquote === true)) {
+                                                    if (j > 0 && markerAry[j-1] === "\\_ht_li") {
+                                                        // paragraph after a list item -- ignore
+                                                        console.log("paragraph after a list item - ignoring");
+                                                    } else if ((bCodeBlock === true) || (bBlockquote === true)) {
                                                         chapterString += "\n"; 
                                                     } else {
                                                         chapterString += "\n\n";
@@ -5088,6 +5091,18 @@ define(function (require) {
                                                 case "\\_ht_hr":
                                                     chapterString += "\n\n***\n"; // hr
                                                     break;
+                                                case "\\esb":
+                                                    chapterString += "<aside>";
+                                                    break;
+                                                case "\\esbe":
+                                                    chapterString = chapterString.trim() + "</aside>";
+                                                    break;
+                                                case "\\sup":
+                                                    chapterString += "<sup>";
+                                                    break;
+                                                case "\\sup*":
+                                                    chapterString = chapterString.trim() + "</sup>";
+                                                    break;
                                                 case "\\li":
                                                     chapterString += "\n  * "; // li from usfm -- just make a ul
                                                     break;
@@ -5108,6 +5123,10 @@ define(function (require) {
                                                     break;
                                                 case "\\_ht_li*":
                                                     break; // do nothing
+                                                case "\\fig":
+                                                    console.log("fig");
+                                                    // string together the next 6 slots
+                                                    break;
                                                 default:
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
                                                         // some other closing html tag
