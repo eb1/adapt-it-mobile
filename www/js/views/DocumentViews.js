@@ -3066,6 +3066,7 @@ define(function (require) {
                             case "list":
                             case "li":
                             case "main":
+                            case "map":
                             case "mark":
                             case "marquee":
                             case "menuitem":
