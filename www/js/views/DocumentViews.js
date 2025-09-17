@@ -2942,11 +2942,6 @@ define(function (require) {
                                 markers += "\\b ";
                                 arrClosing.push("*"); // no closing tag
                                 break;
-                            case "img":
-                                markers += "\\fig " + element.alt + "|src=\"" + element.src + "\" size=\"col\" ref=\" \" \\fig* ";
-                                arrClosing.push("*"); // no closing tag
-                                // skip the rest of this element (and children)
-                                break;
                             // character stylings -- discouraged usfm, but still valid
                             case "b":
                             case "strong":
@@ -3004,6 +2999,7 @@ define(function (require) {
 
                             // **all other HTML tags**
                             // prepended with a \\_ht_<tagname>
+                            case "img":
                             case "a":
                             case "abbreviation":
                             case "acronym":
@@ -3126,6 +3122,10 @@ define(function (require) {
                                 htmlTag = $(element)[0].tagName.toLowerCase();
                                 if (htmlTag === "code") {
                                     bCodeBlock = true;
+                                }
+                                if (htmlTag === "img") {
+                                    // import <img> as \\fig and \\_ht_img to preserve tag data
+                                    markers += "\\fig " + element.alt + "|src=\"" + element.src + "\" size=\"col\" ref=\" \" \\fig* ";
                                 }
                                 // add a closing tag UNLESS we're looking at a void HTML element
                                 // (one that doesn't have a closing tag -- <hr> for example)
@@ -4964,6 +4964,7 @@ define(function (require) {
                 var markerList = new USFM.MarkerCollection();
                 var i = 0;
                 var j = 0;
+                var strTemp = "";
                 var idxFilters = 0;
                 var value = null;
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
@@ -4995,9 +4996,11 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 if (value.get("markers").length > 0) {
+                                    j = 0;
+                                    strTemp = "";
                                     markerAry = value.get("markers").split(" ");
                                     console.log("buildMarkdown - unfiltered markers: " + markerAry.length + " ("+ value.get("markers") + ")");
-                                    for (j = 0; j < markerAry.length; j++) {
+                                    while (j < markerAry.length) {
                                         if (markerAry[j].length > 0) {
                                             switch (markerAry[j]) {
                                                 // newline (only)
@@ -5125,8 +5128,10 @@ define(function (require) {
                                                 case "\\_ht_li*":
                                                     break; // do nothing
                                                 case "\\fig":
-                                                    console.log("fig");
-                                                    // string together the next 6 slots
+                                                    console.log("fig - skipping");
+                                                    // move index forward 6 spots (incl. one at the end of this block)
+                                                    j = j + 5;
+                                                    chapterString += strTemp;
                                                     break;
                                                 default:
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
@@ -5155,6 +5160,7 @@ define(function (require) {
                                                     break;
                                             }
                                         }
+                                        j++;
                                     }
                                     // continue any multi-line formatting
                                     if (bBlockquote === true) {
