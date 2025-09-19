@@ -5299,13 +5299,13 @@ define(function (require) {
                                                     chapterString += "<b>";
                                                     break;
                                                 case "\\bd*":
-                                                    chapterString += "</b>";
+                                                    chapterString = chapterString.trim() + "</b>";
                                                     break;
                                                 case "\\it":
                                                     chapterString += "<i>";
                                                     break;
                                                 case "\\it*":
-                                                    chapterString += "</i>";
+                                                    chapterString = chapterString.trim() + "</i>";
                                                     break;
                                                 case "\\mt1":
                                                     chapterString += "\n<h1>"; // h1
@@ -5352,7 +5352,7 @@ define(function (require) {
                                                         chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
                                                         if (markerAry[j] === "\\_ht_table") {
-                                                            chapterString = chapterString.trim() + "\n\n";
+                                                            chapterString = chapterString.trim() + "\n";
                                                         }
                                                         // some other opening html tag
                                                         chapterString += "<";
