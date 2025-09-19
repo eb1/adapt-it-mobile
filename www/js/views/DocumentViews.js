@@ -9,6 +9,9 @@ define(function (require) {
     "use strict";
 
     const   ONE_SPACE   = " ",
+            HTML_PRE1  = "<!DOCTYPE html><html><head><title>",
+            HTML_PRE2  = "</title></head><body>",
+            HTML_POST  = "</body></html>",
             spaceRE     = /\s+/,            // select 1+ space chars
             nonSpaceRE  = /[^\s+]/,         // select 1+ non-space chars
             CRLF_RE     = /(\r\n|\r|\n)/g,  // select all CRLF variants
@@ -2907,9 +2910,8 @@ define(function (require) {
                         }
                     }
                     // convert the contents to html and send it to readHTMLDoc
-                    var htmlOpening = "<!DOCTYPE html><html><head><title>" + bookName + "</title></head><body>";
-                    var htmlClosing = "</body></html>";
-                    var newContents = htmlOpening + marked.parse(contents) + htmlClosing;
+                    var htmlOpening = HTML_PRE1 + bookName + HTML_PRE2;
+                    var newContents = htmlOpening + marked.parse(contents) + HTML_POST;
                     return readHTMLDoc(newContents);
                 };
 
@@ -2934,10 +2936,12 @@ define(function (require) {
                         // process the node itself
                         if ($(element)[0].nodeType === Node.ELEMENT_NODE) { 
                             // element node
-                            switch ($(element)[0].tagName.toLowerCase()) {
+                            htmlTag = $(element)[0].tagName.toLowerCase();
+                            switch (htmlTag) {
 
                             // **HTML** tags with a direct mapping to a USFM marker 
-                            // - these get converted to usfm
+                            // These get converted to usfm; but we keep the \\_ht_ end marker if the USFM
+                            // tag doesn't have it
                             case "break":
                                 markers += "\\b ";
                                 arrClosing.push("*"); // no closing tag
@@ -2957,48 +2961,46 @@ define(function (require) {
                                 markers += "\\em ";
                                 arrClosing.push("\\em* ");
                                 break;
-                            // headings
+                            // headings, etc.
                             case "h1":
-                                markers += "\\mt1 "; 
-                                arrClosing.push("*"); // no closing tag
+                                markers += "\\mt1 ";
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
                                 break;
                             case "h2":
                                 markers += "\\mt2 "; 
-                                arrClosing.push("*"); // no closing tag
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
                                 break;
                             case "h3":
                                 markers += "\\mt3 "; 
-                                arrClosing.push("*"); // no closing tag
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
                                 break;
                             case "h4":
                                 markers += "\\mt4 "; 
-                                arrClosing.push("*"); // no closing tag
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
                                 break;
                             case "h5":
                                 markers += "\\mt5 "; 
-                                arrClosing.push("*"); // no closing tag
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
                                 break;
                             case "h6":
                                 markers += "\\mt6 "; 
-                                arrClosing.push("*"); // no closing tag
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
                                 break;
                             case "p":
                                 markers += "\\p "; 
-                                arrClosing.push("*"); // no closing tag
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
                                 break;
-
                             case "aside":
                                 markers += "\\esb ";
                                 arrClosing.push("\\esbe ");
                                 break;
-
                             case "sup":
                                 markers += "\\sup ";
                                 arrClosing.push("\\sup* ");
                                 break;
 
                             // **all other HTML tags**
-                            // prepended with a \\_ht_<tagname>
+                            // prepended with a \\_ht_<tagname>, and a closing tag if the HTML has one
                             case "img":
                             case "a":
                             case "abbreviation":
@@ -3119,7 +3121,6 @@ define(function (require) {
                             case "link":
                                 // build a marker containing the name and attributes (if any)
                                 // for this HTML tag
-                                htmlTag = $(element)[0].tagName.toLowerCase();
                                 if (htmlTag === "code") {
                                     bCodeBlock = true;
                                 }
@@ -4915,11 +4916,6 @@ define(function (require) {
                                         chapterString += value.get("target") + " ";
                                     }
                                 }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
-                                }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
                             // insert them into the correct location in the file's strContents string
@@ -5007,6 +5003,7 @@ define(function (require) {
                                                 case "\\c":
                                                 case "\\v":
                                                 case "\\h":
+                                                case "\\b":
                                                     chapterString += "\n\n";
                                                     break;
                                                 case "\\p":
@@ -5018,8 +5015,11 @@ define(function (require) {
                                                     } else if ((bCodeBlock === true) || (bBlockquote === true)) {
                                                         chapterString += "\n"; 
                                                     } else {
-                                                        chapterString += "\n\n";
+                                                        chapterString = chapterString.trim() + "\n\n";
                                                     }
+                                                    break;
+                                                case "\\_ht_hr":
+                                                    chapterString += "\n\n***\n";
                                                     break;
                                                 case "\\bd":
                                                     chapterString += "**";
@@ -5138,6 +5138,9 @@ define(function (require) {
                                                         // some other closing html tag
                                                         chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
+                                                        if (markerAry[j] === "\\_ht_table") {
+                                                            chapterString = chapterString.trim() + "\n\n";
+                                                        }
                                                         // some other opening html tag
                                                         chapterString += "<";
                                                         // are there any HTML attributes we need to parse?
@@ -5200,11 +5203,6 @@ define(function (require) {
                                         chapterString += value.get("target") + ONE_SPACE;
                                     }
                                 }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
-                                }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
                             // insert them into the correct location in the file's strContents string
@@ -5244,7 +5242,210 @@ define(function (require) {
             };
 
             var buildHTML = function () {
+                var chapters = window.Application.ChapterList.where({bookid: bookid});
+                var spList = new spModel.SourcePhraseCollection();
+                var markerList = new USFM.MarkerCollection();
+                var i = 0;
+                var j = 0;
+                var strTemp = "";
+                var idxFilters = 0;
+                var value = null;
+                var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
+                var lastSPID = window.Application.currentBookmark.get('spid');
+                var chaptersLeft = chapters.length;
+                var filtered = false;
+                var needsEndMarker = "";
+                var mkr = "";
+                var bDirty = false;
+                var arrList = [];
+                var markerAry = [];
+                // get the chapters belonging to our book
+                strContents = HTML_PRE1 + bookName + HTML_PRE2;
+                markerList.fetch({reset: true, data: {name: ""}});
+                console.log("markerList count: " + markerList.length);
+                //lastSPID = lastSPID.substring(lastSPID.lastIndexOf("-") + 1);
+                console.log("filterAry: " + filterAry.toString());
+                chapters.forEach(function (entry) {
+                    // for each chapter with some adaptation done, get the sourcephrases
+                    if (entry.get('lastadapted') !== 0) {
+                        // add a placeholder string for this chapter, so that it ends up in order (the call to
+                        // fetch() is async, and sometimes the chapters are returned out of order)
+                        bDirty = true;
+                        strContents += "**" + entry.get("chapterid") + "**";
+                        spList.fetch({reset: true, data: {chapterid: entry.get("chapterid")}}).done(function () {
+                            var chapterString = "";
+                            console.log("spList: " + spList.length + " items, last id = " + lastSPID);
+                            for (i = 0; i < spList.length; i++) {
+                                value = spList.at(i);
+                                if (value.get("markers").length > 0) {
+                                    j = 0;
+                                    strTemp = "";
+                                    markerAry = value.get("markers").split(" ");
+                                    console.log("buildHTML - unfiltered markers: " + markerAry.length + " ("+ value.get("markers") + ")");
+                                    while (j < markerAry.length) {
+                                        if (markerAry[j].length > 0) {
+                                            switch (markerAry[j]) {
+                                                // newline (only)
+                                                case "\\c":
+                                                case "\\v":
+                                                case "\\h":
+                                                case "\\b":
+                                                    chapterString += "<br>";
+                                                    break;
+                                                case "\\p":
+                                                    chapterString += "\n<p>";
+                                                    break;
+                                                case "\\bd":
+                                                    chapterString += "<b>";
+                                                    break;
+                                                case "\\bd*":
+                                                    chapterString += "</b>";
+                                                    break;
+                                                case "\\it":
+                                                    chapterString += "<i>";
+                                                    break;
+                                                case "\\it*":
+                                                    chapterString += "</i>";
+                                                    break;
+                                                case "\\mt1":
+                                                    chapterString += "\n<h1>"; // h1
+                                                    break;
+                                                case "\\mt2":
+                                                    chapterString += "\n<h2>"; // h2
+                                                    break;
+                                                case "\\mt3":
+                                                    chapterString += "\n<h3>"; // h3
+                                                    break;
+                                                case "\\mt4":
+                                                    chapterString += "\n<h4>"; // h4
+                                                    break;
+                                                case "\\mt5":
+                                                    chapterString += "\n<h5>"; // h5
+                                                    break;
+                                                case "\\mt6":
+                                                    chapterString += "\n<h6>"; // h6
+                                                    break;
+                                                case "\\esb":
+                                                    chapterString += "\n<aside>";
+                                                    break;
+                                                case "\\esbe":
+                                                    chapterString = chapterString.trim() + "</aside>";
+                                                    break;
+                                                case "\\sup":
+                                                    chapterString += "<sup>";
+                                                    break;
+                                                case "\\sup*":
+                                                    chapterString = chapterString.trim() + "</sup>";
+                                                    break;
+                                                case "\\li":
+                                                    chapterString += "\n<li>"; // li from usfm -- just make a ul
+                                                    break;
+                                                case "\\fig":
+                                                    console.log("fig - skipping");
+                                                    // move index forward 6 spots (incl. one at the end of this block)
+                                                    j = j + 5;
+                                                    chapterString += strTemp;
+                                                    break;
+                                                default:
+                                                    if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
+                                                        // some other closing html tag
+                                                        chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
+                                                    } else if (markerAry[j].indexOf("\\_ht_") > -1) {
+                                                        if (markerAry[j] === "\\_ht_table") {
+                                                            chapterString = chapterString.trim() + "\n\n";
+                                                        }
+                                                        // some other opening html tag
+                                                        chapterString += "<";
+                                                        // are there any HTML attributes we need to parse?
+                                                        if (markerAry[j].indexOf("|") > -1) {
+                                                            // yes - iterate through the attributes
+                                                            chapterString += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
+                                                            var aryAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1).split("|");
+                                                            for (var k = 0; k < aryAtts.length; k++) {
+                                                                chapterString += decodeURIComponent(aryAtts[k]) + " ";
+                                                            }
+                                                        } else {
+                                                            // no - plain html marker
+                                                            chapterString = chapterString.trim() + markerAry[j].substring(5);
+                                                        }
+                                                        chapterString = chapterString.trim() + ">";
+                                                    } else {
+                                                        console.log("unknown tag: " + markerAry[j]);
 
+                                                    }
+                                                    break;
+                                            }
+                                        }
+                                        j++;
+                                    }
+                                }
+                                // check to see if this sourcephrase is filtered (only looking at the top level)
+                                if (filtered === false) {
+                                    for (idxFilters = 0; idxFilters < filterAry.length; idxFilters++) {
+                                        // sanity check for blank filter strings
+                                        if (filterAry[idxFilters].trim().length > 0) {
+                                            if (value.get("markers").indexOf(filterAry[idxFilters]) >= 0) {
+                                                // this is a filtered sourcephrase -- do not export it
+                                                console.log("filtered: " + value.get("markers"));
+                                                // if there is an end marker associated with this marker,
+                                                // do not export any source phrases until we come across the end marker
+                                                mkr = markerList.where({name: filterAry[idxFilters].trim()});
+                                                if (mkr[0].get("endMarker")) {
+                                                    needsEndMarker = mkr[0].get("endMarker");
+                                                }
+                                                filtered = true;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (value.get("markers").indexOf(needsEndMarker) >= 0) {
+                                    // found our ending marker -- this sourcephrase is not filtered
+                                    needsEndMarker = "";
+                                    filtered = false;
+                                }
+                                if (filtered === false) {
+                                    // only emit soursephrase pre/foll puncts if we have something translated in the target
+                                    if (value.get("source").length > 0 && value.get("target").length > 0) {
+                                        chapterString += value.get("target") + ONE_SPACE;
+                                    }
+                                }
+                            }
+                            // Now take the string from this chapter's sourcephrases that we've just built and
+                            // insert them into the correct location in the file's strContents string
+                            strContents = strContents.replace(("**" + entry.get("chapterid") + "**"), chapterString);
+                            // decrement the chapter count, closing things out if needed
+                            chaptersLeft--;
+                            if (chaptersLeft === 0) {
+                                console.log("finished within sp block");
+                            }
+                        });
+                    } else {
+                        // no sourcephrases to export -- just decrement the chapters, and close things out if needed
+                        chaptersLeft--;
+                        if (chaptersLeft === 0) {
+                            console.log("finished in a blank block");
+                            if (bDirty === false) {
+                                // didn't export anything
+                                exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                                return false;
+                            } 
+                        }
+                    }
+                    if (bDirty === false) {
+                        // didn't export anything
+                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                        return false;                  
+                    }
+                });
+                strContents += HTML_POST;
+                if (strContents === "") {
+                    // didn't export anything
+                    exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                    return false;
+                } else {
+                    // success
+                    return true;
+                }
             };
 
             // USFM document export (target text)
@@ -5357,11 +5558,6 @@ define(function (require) {
                                     // one-off filter -- turn off filtering
                                     console.log("one-off filter, disabling after: " + value.get("source"));
                                     filtered = false;
-                                }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
@@ -5490,11 +5686,6 @@ define(function (require) {
                                         chapterString += value.get("gloss") + " ";
                                     }
                                 }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
-                                }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
                             // insert them into the correct location in the file's strContents string
@@ -5621,11 +5812,6 @@ define(function (require) {
                                     if (value.get("source").length > 0 && value.get("freetrans").length > 0) {
                                         chapterString += value.get("freetrans") + " ";
                                     }
-                                }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
@@ -6214,12 +6400,6 @@ define(function (require) {
                                             }
                                         }
                                     }
-                                }
-                                // done dealing with the source phrase -- is it the last one?
-                                if (value.get('spid') === lastSPID) {
-                                    // last phrase -- exit
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
