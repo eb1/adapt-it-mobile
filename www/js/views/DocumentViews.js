@@ -3171,7 +3171,8 @@ define(function (require) {
                                     s = arr[i];
                                     if (arr[i] === "<p>") {
                                         // newline -- make a note and keep going
-                                        markers += "\\p ";
+                                        markers += "\\b ";
+                                        arrClosing.push("*"); // no closing tag
                                         i++;
                                     } else {
                                         spID = window.Application.generateUUID();
@@ -5004,7 +5005,11 @@ define(function (require) {
                                                 case "\\v":
                                                 case "\\h":
                                                 case "\\b":
-                                                    chapterString += "\n\n";
+                                                    if (bCodeBlock === true) {
+                                                        chapterString += "\n";
+                                                    } else {
+                                                        chapterString += "\n\n";
+                                                    }
                                                     break;
                                                 case "\\p":
                                                     // if we're in a codeblock or a block quote, newline is just a newline;
@@ -5139,7 +5144,7 @@ define(function (require) {
                                                         chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
                                                         if (markerAry[j] === "\\_ht_table") {
-                                                            chapterString = chapterString.trim() + "\n\n";
+                                                            chapterString = chapterString.trim() + "\n";
                                                         }
                                                         // some other opening html tag
                                                         chapterString += "<";
@@ -5350,8 +5355,15 @@ define(function (require) {
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
                                                         // some other closing html tag
                                                         chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
+                                                        // ensure line break after some closing elements
+                                                        if ((markerAry[j] === "\\_ht_table*") || (markerAry[j] === "\\_ht_ul*") || (markerAry[j] === "\\_ht_ol*") ||
+                                                            (markerAry[j] === "\\_ht_p*")) {
+                                                            chapterString = chapterString.trim() + "\n";
+                                                        }                                                 
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
-                                                        if (markerAry[j] === "\\_ht_table") {
+                                                        // ensure line break before some opening elements
+                                                        if ((markerAry[j] === "\\_ht_table") || (markerAry[j] === "\\_ht_ul") || (markerAry[j] === "\\_ht_ol") ||
+                                                            (markerAry[j] === "\\_ht_li")) {
                                                             chapterString = chapterString.trim() + "\n";
                                                         }
                                                         // some other opening html tag
