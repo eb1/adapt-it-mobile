@@ -4794,6 +4794,7 @@ define(function (require) {
             var writer = null;
             var sType = "text/plain"; // default MIME type (text)
             var bResult = true;
+            var strExportBuff = ""; // buffer to hold data until we're sure there's some target text
             // Callback for when the file is imported / saved successfully
             var exportSuccess = function () {
                 console.log("exportSuccess()");
@@ -4885,7 +4886,7 @@ define(function (require) {
                                 // line breaks for chapter, verse, paragraph marks
                                 if ((value.get("markers").indexOf("\\c") > -1) || (value.get("markers").indexOf("\\v") > -1) ||
                                         (value.get("markers").indexOf("\\h") > -1) || (value.get("markers").indexOf("\\p") > -1)) {
-                                    chapterString += "\n"; // newline
+                                    strExportBuff += "\n"; // newline
                                 }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
                                 if (filtered === false) {
@@ -4914,7 +4915,8 @@ define(function (require) {
                                 if (filtered === false) {
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("target").length > 0) {
-                                        chapterString += value.get("target") + " ";
+                                        chapterString += strExportBuff + value.get("target") + " ";
+                                        strExportBuff = "";
                                     }
                                 }
                             }
@@ -5006,9 +5008,9 @@ define(function (require) {
                                                 case "\\h":
                                                 case "\\b":
                                                     if (bCodeBlock === true) {
-                                                        chapterString += "\n";
+                                                        strExportBuff += "\n";
                                                     } else {
-                                                        chapterString += "\n\n";
+                                                        strExportBuff += "\n\n";
                                                     }
                                                     break;
                                                 case "\\p":
@@ -5018,116 +5020,116 @@ define(function (require) {
                                                         // paragraph after a list item -- ignore
                                                         console.log("paragraph after a list item - ignoring");
                                                     } else if ((bCodeBlock === true) || (bBlockquote === true)) {
-                                                        chapterString += "\n"; 
+                                                        strExportBuff += "\n"; 
                                                     } else {
-                                                        chapterString = chapterString.trim() + "\n\n";
+                                                        strExportBuff = strExportBuff.trim() + "\n\n";
                                                     }
                                                     break;
                                                 case "\\_ht_hr":
-                                                    chapterString += "\n\n***\n";
+                                                    strExportBuff += "\n\n***\n";
                                                     break;
                                                 case "\\bd":
-                                                    chapterString += "**";
+                                                    strExportBuff += "**";
                                                     break;
                                                 case "\\bd*":
-                                                    chapterString = chapterString.trim() + "** ";
+                                                    strExportBuff = strExportBuff.trim() + "** ";
                                                     break;
                                                 case "\\it":
-                                                    chapterString += "*";
+                                                    strExportBuff += "*";
                                                     break;
                                                 case "\\it*":
-                                                    chapterString = chapterString.trim() + "* ";
+                                                    strExportBuff = strExportBuff.trim() + "* ";
                                                     break;
                                                 case "\\_ht_code":
                                                     if (bCodeBlock === false) {
-                                                        chapterString += "`";
+                                                        strExportBuff += "`";
                                                     } else {
-                                                        chapterString += "\n";
+                                                        strExportBuff += "\n";
                                                     }
                                                     break;
                                                 case "\\_ht_code*":
                                                     if (bCodeBlock === false) {
-                                                        chapterString = chapterString.trim() + "` ";
+                                                        strExportBuff = strExportBuff.trim() + "` ";
                                                     }
                                                     break;
                                                 case "\\_ht_ul":
                                                     arrList.push(0);
-                                                    chapterString += "\n"; // opening list
+                                                    strExportBuff += "\n"; // opening list
                                                     break;
                                                 case "\\_ht_ol":
                                                     arrList.push(1);
-                                                    chapterString += "\n"; // opening list
+                                                    strExportBuff += "\n"; // opening list
                                                     break;
                                                 case "\\_ht_ul*":
                                                 case "\\_ht_ol*":
                                                     arrList.pop();
-                                                    chapterString += "\n";
+                                                    strExportBuff += "\n";
                                                     break;
                                                 case "\\_ht_blockquote":
                                                     bBlockquote = true;
-                                                    chapterString += "\n"; // opening blockquote
+                                                    strExportBuff += "\n"; // opening blockquote
                                                     break;
                                                 case "\\_ht_blockquote*":
                                                     bBlockquote = false;
-                                                    chapterString += "\n";
+                                                    strExportBuff += "\n";
                                                     break;
                                                 case "\\_ht_pre":
                                                     bCodeBlock = true;
-                                                    chapterString += "\n";
+                                                    strExportBuff += "\n";
                                                     break;
                                                 case "\\_ht_pre*":
                                                     bCodeBlock = false;
-                                                    chapterString += "\n";
+                                                    strExportBuff += "\n";
                                                     break;
                                                 case "\\mt1":
-                                                    chapterString += "\n\n# "; // h1
+                                                    strExportBuff += "\n\n# "; // h1
                                                     break;
                                                 case "\\mt2":
-                                                    chapterString += "\n\n## "; // h2
+                                                    strExportBuff += "\n\n## "; // h2
                                                     break;
                                                 case "\\mt3":
-                                                    chapterString += "\n\n### "; // h3
+                                                    strExportBuff += "\n\n### "; // h3
                                                     break;
                                                 case "\\mt4":
-                                                    chapterString += "\n\n#### "; // h4
+                                                    strExportBuff += "\n\n#### "; // h4
                                                     break;
                                                 case "\\mt5":
-                                                    chapterString += "\n\n##### "; // h5
+                                                    strExportBuff += "\n\n##### "; // h5
                                                     break;
                                                 case "\\mt6":
-                                                    chapterString += "\n\n###### "; // h6
+                                                    strExportBuff += "\n\n###### "; // h6
                                                     break;
                                                 case "\\_ht_hr":
-                                                    chapterString += "\n\n***\n"; // hr
+                                                    strExportBuff += "\n\n***\n"; // hr
                                                     break;
                                                 case "\\esb":
-                                                    chapterString += "<aside>";
+                                                    strExportBuff += "<aside>";
                                                     break;
                                                 case "\\esbe":
-                                                    chapterString = chapterString.trim() + "</aside>";
+                                                    strExportBuff = strExportBuff.trim() + "</aside>";
                                                     break;
                                                 case "\\sup":
-                                                    chapterString += "<sup>";
+                                                    strExportBuff += "<sup>";
                                                     break;
                                                 case "\\sup*":
-                                                    chapterString = chapterString.trim() + "</sup>";
+                                                    strExportBuff = strExportBuff.trim() + "</sup>";
                                                     break;
                                                 case "\\li":
-                                                    chapterString += "\n  * "; // li from usfm -- just make a ul
+                                                    strExportBuff += "\n  * "; // li from usfm -- just make a ul
                                                     break;
                                                 case "\\_ht_li":
-                                                    chapterString += "\n";
+                                                    strExportBuff += "\n";
                                                     // list item, possibly nested -- add spaces if needed
                                                     if (arrList.length > 1) {
-                                                        chapterString += "    ".repeat(arrList.length - 1);
+                                                        strExportBuff += "    ".repeat(arrList.length - 1);
                                                     }
                                                     // is this for an ordered or unordered list?
                                                     if (arrList[arrList.length - 1] === 0) {
                                                         // unordered list
-                                                        chapterString += "  * "; // unordered li
+                                                        strExportBuff += "  * "; // unordered li
                                                     } else {
                                                         // ordered list
-                                                        chapterString += " 1. "; // ordered li
+                                                        strExportBuff += " 1. "; // ordered li
                                                     }
                                                     break;
                                                 case "\\_ht_li*":
@@ -5136,31 +5138,31 @@ define(function (require) {
                                                     console.log("fig - skipping");
                                                     // move index forward 6 spots (incl. one at the end of this block)
                                                     j = j + 5;
-                                                    chapterString += strTemp;
+                                                    strExportBuff += strTemp;
                                                     break;
                                                 default:
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
                                                         // some other closing html tag
-                                                        chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
+                                                        strExportBuff = strExportBuff.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
                                                         if (markerAry[j] === "\\_ht_table") {
-                                                            chapterString = chapterString.trim() + "\n";
+                                                            strExportBuff = strExportBuff.trim() + "\n";
                                                         }
                                                         // some other opening html tag
-                                                        chapterString += "<";
+                                                        strExportBuff += "<";
                                                         // are there any HTML attributes we need to parse?
                                                         if (markerAry[j].indexOf("|") > -1) {
                                                             // yes - iterate through the attributes
-                                                            chapterString += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
+                                                            strExportBuff += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
                                                             var aryAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1).split("|");
                                                             for (var k = 0; k < aryAtts.length; k++) {
-                                                                chapterString += decodeURIComponent(aryAtts[k]) + " ";
+                                                                strExportBuff += decodeURIComponent(aryAtts[k]) + " ";
                                                             }
                                                         } else {
                                                             // no - plain html marker
-                                                            chapterString = chapterString.trim() + markerAry[j].substring(5);
+                                                            strExportBuff = strExportBuff.trim() + markerAry[j].substring(5);
                                                         }
-                                                        chapterString = chapterString.trim() + ">";
+                                                        strExportBuff = strExportBuff.trim() + ">";
                                                     } else {
                                                         console.log("unknown tag: " + markerAry[j]);
 
@@ -5172,10 +5174,10 @@ define(function (require) {
                                     }
                                     // continue any multi-line formatting
                                     if (bBlockquote === true) {
-                                        chapterString += "> ";
+                                        strExportBuff += "> ";
                                     }
                                     if (bCodeBlock === true) {
-                                        chapterString += "    ";
+                                        strExportBuff += "    ";
                                     }
                                 }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
@@ -5205,7 +5207,8 @@ define(function (require) {
                                 if (filtered === false) {
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("target").length > 0) {
-                                        chapterString += value.get("target") + ONE_SPACE;
+                                        chapterString += strExportBuff + value.get("target") + ONE_SPACE;
+                                        strExportBuff = "";
                                     }
                                 }
                             }
@@ -5295,92 +5298,92 @@ define(function (require) {
                                                 case "\\v":
                                                 case "\\h":
                                                 case "\\b":
-                                                    chapterString += "<br>";
+                                                    strExportBuff += "<br>";
                                                     break;
                                                 case "\\p":
-                                                    chapterString += "\n<p>";
+                                                    strExportBuff += "\n<p>";
                                                     break;
                                                 case "\\bd":
-                                                    chapterString += "<b>";
+                                                    strExportBuff += "<b>";
                                                     break;
                                                 case "\\bd*":
-                                                    chapterString = chapterString.trim() + "</b>";
+                                                    strExportBuff = strExportBuff.trim() + "</b>";
                                                     break;
                                                 case "\\it":
-                                                    chapterString += "<i>";
+                                                    strExportBuff += "<i>";
                                                     break;
                                                 case "\\it*":
-                                                    chapterString = chapterString.trim() + "</i>";
+                                                    strExportBuff = strExportBuff.trim() + "</i>";
                                                     break;
                                                 case "\\mt1":
-                                                    chapterString += "\n<h1>"; // h1
+                                                    strExportBuff += "\n<h1>"; // h1
                                                     break;
                                                 case "\\mt2":
-                                                    chapterString += "\n<h2>"; // h2
+                                                    strExportBuff += "\n<h2>"; // h2
                                                     break;
                                                 case "\\mt3":
-                                                    chapterString += "\n<h3>"; // h3
+                                                    strExportBuff += "\n<h3>"; // h3
                                                     break;
                                                 case "\\mt4":
-                                                    chapterString += "\n<h4>"; // h4
+                                                    strExportBuff += "\n<h4>"; // h4
                                                     break;
                                                 case "\\mt5":
-                                                    chapterString += "\n<h5>"; // h5
+                                                    strExportBuff += "\n<h5>"; // h5
                                                     break;
                                                 case "\\mt6":
-                                                    chapterString += "\n<h6>"; // h6
+                                                    strExportBuff += "\n<h6>"; // h6
                                                     break;
                                                 case "\\esb":
-                                                    chapterString += "\n<aside>";
+                                                    strExportBuff += "\n<aside>";
                                                     break;
                                                 case "\\esbe":
-                                                    chapterString = chapterString.trim() + "</aside>";
+                                                    strExportBuff = strExportBuff.trim() + "</aside>";
                                                     break;
                                                 case "\\sup":
-                                                    chapterString += "<sup>";
+                                                    strExportBuff += "<sup>";
                                                     break;
                                                 case "\\sup*":
-                                                    chapterString = chapterString.trim() + "</sup>";
+                                                    strExportBuff = strExportBuff.trim() + "</sup>";
                                                     break;
                                                 case "\\li":
-                                                    chapterString += "\n<li>"; // li from usfm -- just make a ul
+                                                    strExportBuff += "\n<li>"; // li from usfm -- just make a ul
                                                     break;
                                                 case "\\fig":
                                                     console.log("fig - skipping");
                                                     // move index forward 6 spots (incl. one at the end of this block)
                                                     j = j + 5;
-                                                    chapterString += strTemp;
+                                                    strExportBuff += strTemp;
                                                     break;
                                                 default:
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
                                                         // some other closing html tag
-                                                        chapterString = chapterString.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
+                                                        strExportBuff = strExportBuff.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
                                                         // ensure line break after some closing elements
                                                         if ((markerAry[j] === "\\_ht_table*") || (markerAry[j] === "\\_ht_ul*") || (markerAry[j] === "\\_ht_ol*") ||
                                                             (markerAry[j] === "\\_ht_p*")) {
-                                                            chapterString = chapterString.trim() + "\n";
+                                                            strExportBuff = strExportBuff.trim() + "\n";
                                                         }                                                 
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
                                                         // ensure line break before some opening elements
                                                         if ((markerAry[j] === "\\_ht_table") || (markerAry[j] === "\\_ht_ul") || (markerAry[j] === "\\_ht_ol") ||
                                                             (markerAry[j] === "\\_ht_li")) {
-                                                            chapterString = chapterString.trim() + "\n";
+                                                            strExportBuff = strExportBuff.trim() + "\n";
                                                         }
                                                         // some other opening html tag
-                                                        chapterString += "<";
+                                                        strExportBuff += "<";
                                                         // are there any HTML attributes we need to parse?
                                                         if (markerAry[j].indexOf("|") > -1) {
                                                             // yes - iterate through the attributes
-                                                            chapterString += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
+                                                            strExportBuff += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
                                                             var aryAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1).split("|");
                                                             for (var k = 0; k < aryAtts.length; k++) {
-                                                                chapterString += decodeURIComponent(aryAtts[k]) + " ";
+                                                                strExportBuff += decodeURIComponent(aryAtts[k]) + " ";
                                                             }
                                                         } else {
                                                             // no - plain html marker
-                                                            chapterString = chapterString.trim() + markerAry[j].substring(5);
+                                                            strExportBuff = strExportBuff.trim() + markerAry[j].substring(5);
                                                         }
-                                                        chapterString = chapterString.trim() + ">";
+                                                        strExportBuff = strExportBuff.trim() + ">";
                                                     } else {
                                                         console.log("unknown tag: " + markerAry[j]);
 
@@ -5418,7 +5421,8 @@ define(function (require) {
                                 if (filtered === false) {
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("target").length > 0) {
-                                        chapterString += value.get("target") + ONE_SPACE;
+                                        chapterString += strExportBuff + value.get("target") + ONE_SPACE;
+                                        strExportBuff = "";
                                     }
                                 }
                             }
@@ -5525,12 +5529,12 @@ define(function (require) {
                                                                 (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id ") > -1) ||
                                                                 (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                                             // pretty-printing -- add a newline so the output looks better
-                                                            chapterString += "\n"; // newline
+                                                            strExportBuff += "\n"; // newline
                                                         }
                                                         // now add the markers and a space
-                                                        chapterString += markers + " ";
+                                                        strExportBuff += markers + " ";
                                                     }
-                                                    chapterString += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
+                                                    strExportBuff += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
                                                     // if there is an end marker associated with this marker,
                                                     // do not export any source phrases until we come across the end marker
                                                     mkr = markerList.where({name: filterAry[idxFilters].trim()});
@@ -5556,14 +5560,14 @@ define(function (require) {
                                     if (markers.trim().length > 0) {
                                         if ((markers.indexOf("\\v") > -1) || (markers.indexOf("\\c") > -1) || (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) || (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                             // pretty-printing -- add a newline so the output looks better
-                                            chapterString += "\n"; // newline
+                                            strExportBuff += "\n"; // newline
                                         }
                                         // now add the markers and a space
-                                        chapterString += markers + " ";
+                                        strExportBuff += markers + " ";
                                     }
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("target").length > 0) {
-                                        chapterString += value.get("target") + " ";
+                                        chapterString += strExportBuff + value.get("target") + " ";
                                     }
                                 }
                                 if (filtered === true && needsEndMarker === "") {
@@ -5658,12 +5662,12 @@ define(function (require) {
                                                             (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) ||
                                                             (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                                         // pretty-printing -- add a newline so the output looks better
-                                                        chapterString += "\n"; // newline
+                                                        strExportBuff += "\n"; // newline
                                                     }
                                                     // now add the markers and a space
-                                                    chapterString += markers + " ";
+                                                    strExportBuff += markers + " ";
                                                 }
-                                                chapterString += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
+                                                strExportBuff += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
                                                 // if there is an end marker associated with this marker,
                                                 // do not export any source phrases until we come across the end marker
                                                 mkr = markerList.where({name: filterAry[idxFilters].trim()});
@@ -5688,14 +5692,15 @@ define(function (require) {
                                     if (markers.trim().length > 0) {
                                         if ((markers.indexOf("\\v") > -1) || (markers.indexOf("\\c") > -1) || (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) || (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                             // pretty-printing -- add a newline so the output looks better
-                                            chapterString += "\n"; // newline
+                                            strExportBuff += "\n"; // newline
                                         }
                                         // now add the markers and a space
-                                        chapterString += markers + " ";
+                                        strExportBuff += markers + " ";
                                     }
                                     // only emit soursephrase pre/foll puncts if we have something translated in the gloss
                                     if (value.get("source").length > 0 && value.get("gloss").length > 0) {
-                                        chapterString += value.get("gloss") + " ";
+                                        chapterString += strExportBuff + value.get("gloss") + " ";
+                                        strExportBuff = "";
                                     }
                                 }
                             }
@@ -5785,12 +5790,12 @@ define(function (require) {
                                                             (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) ||
                                                             (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                                         // pretty-printing -- add a newline so the output looks better
-                                                        chapterString += "\n"; // newline
+                                                        strExportBuff += "\n"; // newline
                                                     }
                                                     // now add the markers and a space
-                                                    chapterString += markers + " ";
+                                                    strExportBuff += markers + " ";
                                                 }
-                                                chapterString += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
+                                                strExportBuff += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
                                                 // if there is an end marker associated with this marker,
                                                 // do not export any source phrases until we come across the end marker
                                                 mkr = markerList.where({name: filterAry[idxFilters].trim()});
@@ -5815,14 +5820,15 @@ define(function (require) {
                                     if (markers.trim().length > 0) {
                                         if ((markers.indexOf("\\v") > -1) || (markers.indexOf("\\c") > -1) || (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) || (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                             // pretty-printing -- add a newline so the output looks better
-                                            chapterString += "\n"; // newline
+                                            strExportBuff += "\n"; // newline
                                         }
                                         // now add the markers and a space
-                                        chapterString += markers + " ";
+                                        strExportBuff += markers + " ";
                                     }
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("freetrans").length > 0) {
-                                        chapterString += value.get("freetrans") + " ";
+                                        chapterString += strExportBuff + value.get("freetrans") + " ";
+                                        strExportBuff = "";
                                     }
                                 }
                             }
