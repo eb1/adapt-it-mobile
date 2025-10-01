@@ -148,7 +148,7 @@ define(function (require) {
                             targetunits.push(tu);
                             tu.on("change", tu.save, tu);
                         }
-                        console.log("SELECT ok: " + res.rows.length + " targetunit items");
+                        console.log("resetFromDB SELECT ok: " + res.rows.length + " targetunit items");
                     });
                 }, function (err) {
                     console.log("SELECT error: " + err.message);
@@ -248,7 +248,7 @@ define(function (require) {
                 window.Application.db.transaction(function (tx) {
                     tx.executeSql(sql, [], function (tx, res) {
                         retValue = res.rows.item(0).tot;
-                        console.log("SELECT ok: " + retValue + " targetunit items");
+                        console.log("getCount SELECT ok: " + retValue + " targetunit items");
                         deferred.resolve(retValue);
                     }, function (tx, err) {
                         console.log("SELECT COUNT(*) error: " + err.message);
@@ -340,7 +340,7 @@ define(function (require) {
                                     targetunits.push(tu);
                                     tu.on("change", tu.save, tu);
                                 }
-                                console.log("SELECT ok: " + res.rows.length + " targetunit items");
+                                console.log("sync read (projectid) SELECT ok: " + res.rows.length + " targetunit items");
                                 retValue = targetunits;
                                 options.success(retValue);
                                 deferred.resolve(retValue);
@@ -375,7 +375,7 @@ define(function (require) {
                                         targetunits.push(tu);
                                         tu.on("change", tu.save, tu);
                                     }
-                                    console.log("SELECT ok: " + res.rows.length + " targetunit items");
+                                    console.log("sync read (source) SELECT ok: " + res.rows.length + " targetunit items");
                                     // return the filtered results (now that we have them)
                                     retValue = targetunits.filter(function (element) {
                                         return element.attributes.source.toLowerCase().indexOf(source.toLowerCase()) > -1;
