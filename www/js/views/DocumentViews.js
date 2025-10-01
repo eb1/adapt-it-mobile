@@ -8,7 +8,11 @@ define(function (require) {
 
     "use strict";
 
-    const   spaceRE     = /\s+/,            // select 1+ space chars
+    const   ONE_SPACE   = " ",
+            HTML_PRE1  = "<!DOCTYPE html><html><head><title>",
+            HTML_PRE2  = "</title></head><body>",
+            HTML_POST  = "</body></html>",
+            spaceRE     = /\s+/,            // select 1+ space chars
             nonSpaceRE  = /[^\s+]/,         // select 1+ non-space chars
             CRLF_RE     = /(\r\n|\r|\n)/g,  // select all CRLF variants
             GspaceRE    = /\s+/g;           // globally select all 1+ space chars
@@ -19,6 +23,7 @@ define(function (require) {
         Backbone        = require('backbone'),
         Marionette      = require('marionette'),
         i18n            = require('i18n'),
+        marked          = require('marked'),
         projModel       = require('app/models/project'),
         tplLoadingPleaseWait = require('text!tpl/LoadingPleaseWait.html'),
         tplImportDoc    = require('text!tpl/CopyOrImport.html'),
@@ -76,7 +81,9 @@ define(function (require) {
             KBTMX: 6,    // https://www.ttt.org/oscarStandards/tmx/
             GLOSSKBXML: 7,
             SFM_KB: 8, // SFM with \lx \ge markers
-            LIFT: 9 // https://github.com/sillsdev/lift-standard
+            LIFT: 9, // https://github.com/sillsdev/lift-standard
+            MD: 10,     // https://daringfireball.net/projects/markdown/ (using the marked.js parser)
+            HTML: 11    // https://html.spec.whatwg.org
         },
         DestinationEnum = {
             FILE: 1,
@@ -711,7 +718,7 @@ define(function (require) {
                                 } else {
                                     // some other char item
                                     markers += "\\" + element.attributes.item("style").nodeValue;
-                                    closingMarker = "\\" + element.attributes.item("style").nodeValue + "*";
+                                    closingMarker += "\\" + element.attributes.item("style").nodeValue + "*";
                                 }
                                 if (element.getAttribute("link-href") && element.getAttribute("link-href").length > 0) {
                                     markers += " \\z-link-href=\"" + element.getAttributes.item("link-href").nodeValue + "\"";
@@ -772,7 +779,7 @@ define(function (require) {
                                 if (element.getAttribute("copy") && element.getAttribute("copy").length > 0) {
                                     markers += " copy=\"" + element.attributes.item("copy").nodeValue + "\"";    
                                 }
-                                closingMarker = "\\fig*";
+                                closingMarker += "\\fig*";
                                 break;
                             case "note":
                                     //caller, style
@@ -783,7 +790,7 @@ define(function (require) {
                                 if (element.getAttribute("caller") && element.getAttribute("caller").length > 0) {
                                     markers += " " + element.getAttribute("caller") + " ";
                                 }
-                                closingMarker = "\\" + element.getAttribute("style") + "*";
+                                closingMarker += "\\" + element.getAttribute("style") + "*";
                                 if (element.getAttribute("category") && element.getAttribute("category").length > 0) {
                                     markers += "\\cat " + element.getAttribute("category") + "\\cat*";
                                 }
@@ -818,7 +825,7 @@ define(function (require) {
                                 if (element.getAttribute("category") && element.getAttribute("category").length > 0) {
                                     markers += " \\cat " + element.getAttribute("category") + "\\cat*";
                                 }
-                                closingMarker = "\\esbe*";
+                                closingMarker += "\\esbe*";
                                 break;
                             case "ref":
                                 if (markers.length > 0) {
@@ -2871,6 +2878,518 @@ define(function (require) {
                     // return true; // success
                     // END readSFMLexDoc()
                 };
+
+                // Markdown document
+                // This is a passthrough method; the markdown document gets converted to HTML
+                // using the marked library, and then sent to readHTMLDoc to actually do the parsing.
+                // This is because markdown is almost a shorthand for html (and can contain HTML snippets), so
+                // it's easier to just deal with html to usfm parsing below.
+                var readMDDoc = function(contents) {
+                    console.log("readMDDoc - converting MD to HTML");
+                    if (fileName.indexOf(i18n.t("view.lblText") + "-") > -1) {
+                        // Attempt to take the bookName from a H1 marker (# )
+                        if (contents.indexOf("# ") > -1) {
+                            // pull out from the # to the next line (if possible)
+                            bookName = contents.substring(contents.indexOf("# ") + 2, contents.indexOf("\n", contents.indexOf("# ") + 2));
+                            if (bookName.length === 0) {
+                                // welp, we tried - fall back on clipboard name
+                                bookName = fileName;
+                            }
+                        } else {
+                            // fall back on "Text-{guid}" clipboard snippet name
+                            bookName = fileName;
+                        }
+                    } else {
+                        // not a clipboard snippet -- does it have a file extension?
+                        if (fileName.indexOf(".") > -1) {
+                            // has an extension -- remove it for our book name guess
+                            bookName = fileName.substring(0, fileName.lastIndexOf('.'));
+                        } else {
+                            // no extension -- use it as-is for our book name guess
+                            bookName = fileName;
+                        }
+                    }
+                    // convert the contents to html and send it to readHTMLDoc
+                    var htmlOpening = HTML_PRE1 + bookName + HTML_PRE2;
+                    var newContents = htmlOpening + marked.parse(contents) + HTML_POST;
+                    return readHTMLDoc(newContents);
+                };
+
+                // HTML document
+                var readHTMLDoc = function(contents) {
+                    var newline = new RegExp(/\r\n|\r|\n/, 'g');
+                    var voidElts = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
+                    var i = 0;
+                    var sp = null;
+                    var htmlTag = "";
+                    var chaps = [];
+                    var arrHTML = $.parseHTML(contents);
+                    var chapterName = "";
+                    var nodeStyle = "";
+                    var arrClosing = [];
+                    var bCodeBlock = false;
+                    var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
+                    console.log("Reading HTML file:" + fileName);
+                    var parseNode = function (element) {
+                        nodeStyle = "";
+                        console.log("parseNode - Element type: " + $(element)[0].nodeType)
+                        // process the node itself
+                        if ($(element)[0].nodeType === Node.ELEMENT_NODE) { 
+                            // element node
+                            htmlTag = $(element)[0].tagName.toLowerCase();
+                            switch (htmlTag) {
+
+                            // **HTML** tags with a direct mapping to a USFM marker 
+                            // These get converted to usfm; but we keep the \\_ht_ end marker if the USFM
+                            // tag doesn't have it
+                            case "break":
+                                markers += "\\b ";
+                                arrClosing.push("*"); // no closing tag
+                                break;
+                            // character stylings -- discouraged usfm, but still valid
+                            case "b":
+                            case "strong":
+                                markers += "\\bd ";
+                                arrClosing.push("\\bd* ");
+                                break;
+                            case "em":
+                            case "i":
+                                markers += "\\it ";
+                                arrClosing.push("\\it* ");
+                                break;
+                            case "u": // emphasis
+                                markers += "\\em ";
+                                arrClosing.push("\\em* ");
+                                break;
+                            // headings, etc.
+                            case "h1":
+                                markers += "\\mt1 ";
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                break;
+                            case "h2":
+                                markers += "\\mt2 "; 
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                break;
+                            case "h3":
+                                markers += "\\mt3 "; 
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                break;
+                            case "h4":
+                                markers += "\\mt4 "; 
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                break;
+                            case "h5":
+                                markers += "\\mt5 "; 
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                break;
+                            case "h6":
+                                markers += "\\mt6 "; 
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                break;
+                            case "p":
+                                markers += "\\p "; 
+                                arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                break;
+                            case "aside":
+                                markers += "\\esb ";
+                                arrClosing.push("\\esbe ");
+                                break;
+                            case "sup":
+                                markers += "\\sup ";
+                                arrClosing.push("\\sup* ");
+                                break;
+
+                            // **all other HTML tags**
+                            // prepended with a \\_ht_<tagname>, and a closing tag if the HTML has one
+                            case "img":
+                            case "a":
+                            case "abbreviation":
+                            case "acronym":
+                            case "address":
+                            case "anchor":
+                            case "applet":
+                            case "area":
+                            case "article":
+                            case "audio":
+                            case "base":
+                            case "basefont":
+                            case "bdi":
+                            case "bdo":
+                            case "bgsound":
+                            case "big":
+                            case "blockquote":
+                            case "body":
+                            case "button":
+                            case "caption":
+                            case "canvas":
+                            case "center":
+                            case "cite":
+                            case "code":
+                            case "column":
+                            case "colgroup":
+                            case "comment":
+                            case "data":
+                            case "datalist":
+                            case "dd":
+                            case "define":
+                            case "delete":
+                            case "details":
+                            case "dialog":
+                            case "dir":
+                            case "div":
+                            case "dl":
+                            case "dt":
+                            case "embed":
+                            case "fieldset":
+                            case "figcaption":
+                            case "figure":
+                            case "font":
+                            case "footer":
+                            case "form":
+                            case "frame":
+                            case "frameset":
+                            case "head":
+                            case "header":
+                            case "hgroup":
+                            case "hr":
+                            case "html":
+                            case "iframes":
+                            case "input":
+                            case "ins":
+                            case "isindex":
+                            case "kbd":
+                            case "keygen":
+                            case "label":
+                            case "legend":
+                            case "list":
+                            case "li":
+                            case "main":
+                            case "map":
+                            case "mark":
+                            case "marquee":
+                            case "menuitem":
+                            case "meta":
+                            case "meter":
+                            case "nav":
+                            case "nobreak":
+                            case "noembed":
+                            case "noscript":
+                            case "object":
+                            case "ol":
+                            case "optgroup":
+                            case "option":
+                            case "output":
+                            case "paragraphs":
+                            case "param":
+                            case "phrase":
+                            case "pre":
+                            case "progress":
+                            case "q":
+                            case "rp":
+                            case "rt":
+                            case "ruby":
+                            case "s":
+                            case "samp":
+                            case "script":
+                            case "section":
+                            case "small":
+                            case "source":
+                            case "spacer":
+                            case "span":
+                            case "strike":
+                            case "style":
+                            case "sub":
+                            case "summary":
+                            case "svg":
+                            case "table":
+                            case "th":
+                            case "thead":
+                            case "tbody":
+                            case "td":
+                            case "template":
+                            case "tfoot":
+                            case "time":
+                            case "title":
+                            case "tr":
+                            case "track":
+                            case "tt":
+                            case "ul":
+                            case "var":
+                            case "video":
+                            case "wbr":
+                            case "xmp":
+                            case "link":
+                                // build a marker containing the name and attributes (if any)
+                                // for this HTML tag
+                                if (htmlTag === "code") {
+                                    bCodeBlock = true;
+                                }
+                                if (htmlTag === "img") {
+                                    // import <img> as \\fig and \\_ht_img to preserve tag data
+                                    markers += "\\fig " + element.alt + "|src=\"" + element.src + "\" size=\"col\" ref=\" \" \\fig* ";
+                                }
+                                // add a closing tag UNLESS we're looking at a void HTML element
+                                // (one that doesn't have a closing tag -- <hr> for example)
+                                if (!voidElts.includes(htmlTag)) {
+                                    arrClosing.push("\\_ht_" + htmlTag + "* ");
+                                } else {
+                                    arrClosing.push("*"); // no closing tag
+                                }
+                                if ($(element)[0].attributes.length > 0) {
+                                    // this tag has attributes -- add them to the sourcephrase
+                                    $.each($(element)[0].attributes, function(i, att) {
+                                        htmlTag += "|\"" + encodeURIComponent(att.name) + "\"=\"" + encodeURIComponent(att.value) + "\"";
+                                })
+                                }
+                                // add the marker
+                                markers += "\\_ht_" + htmlTag + " ";
+                                break;
+
+                            default:
+                                console.log("WARN: skipping tag - " + $(element)[0].tagName.toLowerCase());
+                                break;
+                            }
+                        }
+                        
+                        // If this is a text node, create any needed sourcephrases
+                        if ($(element)[0].nodeType === Node.TEXT_NODE) {
+                            // Split the text into an array
+                            // Note that this is analogous to the AI "strip" of text, and not the whole document
+                            arr = ($(element)[0].nodeValue).replace(newline, " <p> ").trim().split(spaceRE);
+                            arrSP = ($(element)[0].nodeValue).replace(newline, " <p> ").trim().split(nonSpaceRE);  // do the inverse (keep spaces)
+                            // arr = ($(element)[0].nodeValue).trim().split(spaceRE);
+                            // arrSP = ($(element)[0].nodeValue).trim().split(nonSpaceRE);
+                            i = 0;
+                            while (i < arr.length) {
+                                // check for a marker
+                                if (arr[i].length === 0) {
+                                    // nothing in this token -- skip
+                                    i++;
+                                } else if (bCodeBlock === true) {
+                                    // inside a code block, almost everything is treated as a source phrase
+                                    // newlines are the exception
+                                    s = arr[i];
+                                    if (arr[i] === "<p>") {
+                                        // newline -- make a note and keep going
+                                        markers += "\\b ";
+                                        arrClosing.push("*"); // no closing tag
+                                        i++;
+                                    } else {
+                                        spID = window.Application.generateUUID();
+                                        sp = new spModel.SourcePhrase({
+                                            spid: spID,
+                                            norder: norder,
+                                            chapterid: chapterID,
+                                            vid: verseID,
+                                            markers: markers,
+                                            orig: null,
+                                            prepuncts: "",
+                                            midpuncts: "",
+                                            follpuncts: "",
+                                            srcwordbreak: arrSP[i],
+                                            source: s,
+                                            target: ""
+                                        });
+                                        markers = "";
+                                        prepuncts = "";
+                                        follpuncts = "";
+                                        punctIdx = 0;
+                                        index++;
+                                        norder++;
+                                        sps.push(sp);
+                                        // if necessary, send the next batch of SourcePhrase INSERT transactions
+                                        if ((sps.length % MAX_BATCH) === 0) {
+                                            batchesSent++;
+                                            updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailChapterVerse", {chap: chapterName, verse: -(index)})}), 0);
+                                            deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - MAX_BATCH)));
+                                            deferreds[deferreds.length - 1].done(function() {
+                                                updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
+                                            });        
+                                        }
+                                        i++;
+                                    }
+                                } else if (arr[i] === "<p>") {
+                                    // newline -- make a note and keep going
+                                    // markers += "\\p ";
+                                    i++;
+                                } else if (arr[i].length === 1 && puncts.indexOf(arr[i]) > -1) {
+                                    // punctuation token -- add to the prepuncts
+                                    prepuncts += arr[i];
+                                    i++;
+                                } else {
+                                    // "normal" sourcephrase token, or a code block
+                                    s = arr[i];
+                                    // look for leading and trailing punctuation
+                                    // leading...
+                                    if (puncts.indexOf(arr[i].charAt(0)) > -1) {
+                                        // leading punct 
+                                        punctIdx = 0;
+                                        while (puncts.indexOf(arr[i].charAt(punctIdx)) > -1 && punctIdx < arr[i].length) {
+                                            prepuncts += arr[i].charAt(punctIdx);
+                                            punctIdx++;
+                                        }
+                                    }
+                                    if (punctIdx === s.length) {
+                                        // it'a ALL punctuation -- jump to the next token
+                                        i++;
+                                    } else {
+                                        // not all punctuation -- check following punctuation, then create a sourcephrase
+                                        if (puncts.indexOf(s.charAt(s.length - 1)) > -1) {
+                                            // trailing punct 
+                                            punctIdx = s.length - 1;
+                                            while (puncts.indexOf(s.charAt(punctIdx)) > -1 && punctIdx > 0) {
+                                                follpuncts += s.charAt(punctIdx);
+                                                punctIdx--;
+                                            }
+                                        }
+                                        // Now create a new sourcephrase
+                                        spID = window.Application.generateUUID();
+                                        sp = new spModel.SourcePhrase({
+                                            spid: spID,
+                                            norder: norder,
+                                            chapterid: chapterID,
+                                            vid: verseID,
+                                            markers: markers,
+                                            orig: null,
+                                            prepuncts: prepuncts,
+                                            midpuncts: midpuncts,
+                                            follpuncts: follpuncts,
+                                            srcwordbreak: arrSP[i],
+                                            source: s,
+                                            target: ""
+                                        });
+                                        markers = "";
+                                        prepuncts = "";
+                                        follpuncts = "";
+                                        punctIdx = 0;
+                                        index++;
+                                        norder++;
+                                        sps.push(sp);
+                                        // if necessary, send the next batch of SourcePhrase INSERT transactions
+                                        if ((sps.length % MAX_BATCH) === 0) {
+                                            batchesSent++;
+                                            updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailChapterVerse", {chap: chapterName, verse: -(index)})}), 0);
+                                            deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - MAX_BATCH)));
+                                            deferreds[deferreds.length - 1].done(function() {
+                                                updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
+                                            });        
+                                        }
+                                        i++;
+                                    }
+                                }
+                            }
+                            return; // text node complete
+                        }
+                        // recurse into children
+                        if ($(element).contents().length > 0) {
+                            $(element).contents().each(function (idx, elt) {
+                                parseNode(elt);
+                            });
+                        }
+                        // done with node -- if there was a closing marker, copy it over to the markers
+                        // so it gets picked up in the next sourcephrase
+                        if (arrClosing.length > 0) {
+                            var strClose = arrClosing.pop();
+                            if (strClose !== "*") {
+                                // we use the special char * to denote a node with no closing tag, to keep
+                                // the stack matched. Since this is a _real_ closing tag, add it to the markers
+                                markers += strClose + " ";
+                                if (strClose.indexOf("ht_code") > -1) {
+                                    // no longer in a code block
+                                    bCodeBlock = false;
+                                }
+                            }
+                        }
+                    };
+
+                    index = contents.indexOf("<body>");
+                    if (index === -1) {
+                        // not html we can work with (no body element)
+                        return false;
+                    }
+                    bookID = window.Application.generateUUID();
+                    // Create the book and chapter 
+                    book = new bookModel.Book({
+                        bookid: bookID,
+                        projectid: project.get('projectid'),
+                        name: bookName,
+                        filename: fileName,
+                        chapters: []
+                    });
+                    books.add(book);
+                    // (for now, just one chapter -- eventually we could chunk this out based on file size)
+                    chapterID = window.Application.generateUUID();
+                    chaps.push(chapterID);
+                    chapter = new chapModel.Chapter({
+                        chapterid: chapterID,
+                        bookid: bookID,
+                        projectid: project.get('projectid'),
+                        name: bookName,
+                        lastadapted: 0,
+                        versecount: 0
+                    });
+                    chapters.add(chapter);
+                    // set the current bookmark if not already set
+                    if (window.Application.currentBookmark === null) {
+                        var bookmarkid = window.Application.generateUUID();
+                        var newBookmark = new userModels.Bookmark({
+                            bookmarkid: bookmarkid,
+                            projectid: project.get('projectid'),
+                            name: bookName,
+                            bookid: bookID,
+                            chapterid: chapterID // note: no spID set (will start at beginning)
+                        });
+                        // save and add to the collection
+                        newBookmark.save();
+                        window.Application.bookmarkList.add(newBookmark);
+                        window.Application.currentBookmark = newBookmark;
+                    } else if (window.Application.currentBookmark.get('bookid').length === 0) {
+                        // project is set, but the book / chapter values are not set -- set them now
+                        window.Application.currentBookmark.set("name", bookName, {silent: true});
+                        window.Application.currentBookmark.set("bookid", bookID, {silent: true});
+                        window.Application.currentBookmark.set("chapterid", chapterID, {silent: true});
+                        window.Application.currentBookmark.update();
+                    }
+
+                    // now read the contents of the file
+                    arrHTML.forEach((item) => parseNode(item));
+                    // parseNode($($html).find("html"));
+
+                    // add any remaining sourcephrases
+                    if ((sps.length % MAX_BATCH) > 0) {
+                        batchesSent++;
+                        updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailWords", {count: sps.length})}), 0);
+                        deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - (sps.length % MAX_BATCH))));
+                        deferreds[deferreds.length - 1].done(function() {
+                            updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
+                        });
+                    }
+                    // track all those deferred calls to addBatch -- when they all complete, report the results to the user
+                    intervalID = window.setInterval(function() {
+                        var result = checkState();
+                        if (result === "pending") {
+                            // pending -- do nothing
+                        } else if (result === "resolved") {
+                            // resolved
+                            clearInterval(intervalID);
+                            intervalID = 0;
+                            importSuccess();
+                        } else {
+                            // rejected
+                            clearInterval(intervalID);
+                            intervalID = 0;
+                            importFail(result);
+                        }
+                    }, 1000);
+
+                    // for non-scripture texts, there are no verses. Keep track of how far we are by using a 
+                    // negative value for the # of SourcePhrases in the text.
+                    chapter.set('versecount', -(index), {silent: true});
+                    chapter.save();
+                    book.set('chapters', chaps, {silent: true});
+                    book.save();
+                    return true; // success
+                };
                 
                 // USFM document
                 // This is the file format for Bibledit and Paratext
@@ -4117,6 +4636,10 @@ define(function (require) {
                         // no \lx -- try parsing as a plain old USFM doc
                         result = readUSFMDoc(contents);
                     }
+                } else if (fileName.toLowerCase().indexOf(".md") > 0) {
+                    result = readMDDoc(contents);
+                } else if ((fileName.toLowerCase().indexOf(".htm") > 0) || (fileName.toLowerCase().indexOf(".html") > 0)) {
+                    result = readHTMLDoc(contents);                    
                 } else if (fileName.toLowerCase().indexOf(".usx") > 0) {
                     result = readUSXDoc(contents);
                 } else if (fileName.toLowerCase().indexOf(".lift") > 0) {
@@ -4174,6 +4697,8 @@ define(function (require) {
                         var newFileName = "";
                         if (contents.indexOf("tmx version=") >= 0) {
                             result = readTMXDoc(contents);
+                        } else if (contents.indexOf("<html") >= 0) {
+                            result = readHTMLDoc(contents);
                         } else if (contents.indexOf("glossingKB=\"1") >= 0) {
                             // _probably_ a glossing KB XML document
                             result = readGlossXMLDoc(contents);
@@ -4241,6 +4766,9 @@ define(function (require) {
                         } else if (contents.indexOf("\\lx") >= 0) {
                             // _probably_ \lx data for the KB
                             result = readSFMLexDoc(contents);
+                        } else if ((contents.indexOf("##") >= 0) || (contents.indexOf("===") >= 0)) {
+                            // _maybe_ a markdown file?
+                            result = readMDDoc(contents);
                         } else {
                             // unknown -- try reading it as a text document
                             result = readTextDoc(contents);
@@ -4266,6 +4794,7 @@ define(function (require) {
             var writer = null;
             var sType = "text/plain"; // default MIME type (text)
             var bResult = true;
+            var strExportBuff = ""; // buffer to hold data until we're sure there's some target text
             // Callback for when the file is imported / saved successfully
             var exportSuccess = function () {
                 console.log("exportSuccess()");
@@ -4357,7 +4886,7 @@ define(function (require) {
                                 // line breaks for chapter, verse, paragraph marks
                                 if ((value.get("markers").indexOf("\\c") > -1) || (value.get("markers").indexOf("\\v") > -1) ||
                                         (value.get("markers").indexOf("\\h") > -1) || (value.get("markers").indexOf("\\p") > -1)) {
-                                    chapterString += "\n"; // newline
+                                    strExportBuff += "\n"; // newline
                                 }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
                                 if (filtered === false) {
@@ -4386,13 +4915,9 @@ define(function (require) {
                                 if (filtered === false) {
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("target").length > 0) {
-                                        chapterString += value.get("target") + " ";
+                                        chapterString += strExportBuff + value.get("target") + " ";
+                                        strExportBuff = "";
                                     }
-                                }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
@@ -4432,6 +4957,513 @@ define(function (require) {
                 }
             };
 
+            var buildMarkdown = function () {
+                var chapters = window.Application.ChapterList.where({bookid: bookid});
+                var spList = new spModel.SourcePhraseCollection();
+                var markerList = new USFM.MarkerCollection();
+                var i = 0;
+                var j = 0;
+                var strTemp = "";
+                var idxFilters = 0;
+                var value = null;
+                var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
+                var lastSPID = window.Application.currentBookmark.get('spid');
+                var chaptersLeft = chapters.length;
+                var filtered = false;
+                var needsEndMarker = "";
+                var mkr = "";
+                var bDirty = false;
+                var bBlockquote = false;
+                var bCodeBlock = false;
+                var arrList = [];
+                var markerAry = [];
+                // get the chapters belonging to our book
+                markerList.fetch({reset: true, data: {name: ""}});
+                console.log("markerList count: " + markerList.length);
+                //lastSPID = lastSPID.substring(lastSPID.lastIndexOf("-") + 1);
+                console.log("filterAry: " + filterAry.toString());
+                chapters.forEach(function (entry) {
+                    // for each chapter with some adaptation done, get the sourcephrases
+                    if (entry.get('lastadapted') !== 0) {
+                        // add a placeholder string for this chapter, so that it ends up in order (the call to
+                        // fetch() is async, and sometimes the chapters are returned out of order)
+                        bDirty = true;
+                        strContents += "**" + entry.get("chapterid") + "**";
+                        spList.fetch({reset: true, data: {chapterid: entry.get("chapterid")}}).done(function () {
+                            var chapterString = "";
+                            console.log("spList: " + spList.length + " items, last id = " + lastSPID);
+                            for (i = 0; i < spList.length; i++) {
+                                value = spList.at(i);
+                                if (value.get("markers").length > 0) {
+                                    j = 0;
+                                    strTemp = "";
+                                    markerAry = value.get("markers").split(" ");
+                                    console.log("buildMarkdown - unfiltered markers: " + markerAry.length + " ("+ value.get("markers") + ")");
+                                    while (j < markerAry.length) {
+                                        if (markerAry[j].length > 0) {
+                                            switch (markerAry[j]) {
+                                                // newline (only)
+                                                case "\\c":
+                                                case "\\v":
+                                                case "\\h":
+                                                case "\\b":
+                                                    if (bCodeBlock === true) {
+                                                        strExportBuff += "\n";
+                                                    } else {
+                                                        strExportBuff += "\n\n";
+                                                    }
+                                                    break;
+                                                case "\\p":
+                                                    // if we're in a codeblock or a block quote, newline is just a newline;
+                                                    // if not, separate the paragraphs by a blank line
+                                                    if (j > 0 && markerAry[j-1] === "\\_ht_li") {
+                                                        // paragraph after a list item -- ignore
+                                                        console.log("paragraph after a list item - ignoring");
+                                                    } else if ((bCodeBlock === true) || (bBlockquote === true)) {
+                                                        strExportBuff += "\n"; 
+                                                    } else {
+                                                        strExportBuff = strExportBuff.trim() + "\n\n";
+                                                    }
+                                                    break;
+                                                case "\\_ht_hr":
+                                                    strExportBuff += "\n\n***\n";
+                                                    break;
+                                                case "\\bd":
+                                                    strExportBuff += "**";
+                                                    break;
+                                                case "\\bd*":
+                                                    strExportBuff = strExportBuff.trim() + "** ";
+                                                    break;
+                                                case "\\it":
+                                                    strExportBuff += "*";
+                                                    break;
+                                                case "\\it*":
+                                                    strExportBuff = strExportBuff.trim() + "* ";
+                                                    break;
+                                                case "\\_ht_code":
+                                                    if (bCodeBlock === false) {
+                                                        strExportBuff += "`";
+                                                    } else {
+                                                        strExportBuff += "\n";
+                                                    }
+                                                    break;
+                                                case "\\_ht_code*":
+                                                    if (bCodeBlock === false) {
+                                                        strExportBuff = strExportBuff.trim() + "` ";
+                                                    }
+                                                    break;
+                                                case "\\_ht_ul":
+                                                    arrList.push(0);
+                                                    strExportBuff += "\n"; // opening list
+                                                    break;
+                                                case "\\_ht_ol":
+                                                    arrList.push(1);
+                                                    strExportBuff += "\n"; // opening list
+                                                    break;
+                                                case "\\_ht_ul*":
+                                                case "\\_ht_ol*":
+                                                    arrList.pop();
+                                                    strExportBuff += "\n";
+                                                    break;
+                                                case "\\_ht_blockquote":
+                                                    bBlockquote = true;
+                                                    strExportBuff += "\n"; // opening blockquote
+                                                    break;
+                                                case "\\_ht_blockquote*":
+                                                    bBlockquote = false;
+                                                    strExportBuff += "\n";
+                                                    break;
+                                                case "\\_ht_pre":
+                                                    bCodeBlock = true;
+                                                    strExportBuff += "\n";
+                                                    break;
+                                                case "\\_ht_pre*":
+                                                    bCodeBlock = false;
+                                                    strExportBuff += "\n";
+                                                    break;
+                                                case "\\mt1":
+                                                    strExportBuff += "\n\n# "; // h1
+                                                    break;
+                                                case "\\mt2":
+                                                    strExportBuff += "\n\n## "; // h2
+                                                    break;
+                                                case "\\mt3":
+                                                    strExportBuff += "\n\n### "; // h3
+                                                    break;
+                                                case "\\mt4":
+                                                    strExportBuff += "\n\n#### "; // h4
+                                                    break;
+                                                case "\\mt5":
+                                                    strExportBuff += "\n\n##### "; // h5
+                                                    break;
+                                                case "\\mt6":
+                                                    strExportBuff += "\n\n###### "; // h6
+                                                    break;
+                                                case "\\_ht_hr":
+                                                    strExportBuff += "\n\n***\n"; // hr
+                                                    break;
+                                                case "\\esb":
+                                                    strExportBuff += "<aside>";
+                                                    break;
+                                                case "\\esbe":
+                                                    strExportBuff = strExportBuff.trim() + "</aside>";
+                                                    break;
+                                                case "\\sup":
+                                                    strExportBuff += "<sup>";
+                                                    break;
+                                                case "\\sup*":
+                                                    strExportBuff = strExportBuff.trim() + "</sup>";
+                                                    break;
+                                                case "\\li":
+                                                    strExportBuff += "\n  * "; // li from usfm -- just make a ul
+                                                    break;
+                                                case "\\_ht_li":
+                                                    strExportBuff += "\n";
+                                                    // list item, possibly nested -- add spaces if needed
+                                                    if (arrList.length > 1) {
+                                                        strExportBuff += "    ".repeat(arrList.length - 1);
+                                                    }
+                                                    // is this for an ordered or unordered list?
+                                                    if (arrList[arrList.length - 1] === 0) {
+                                                        // unordered list
+                                                        strExportBuff += "  * "; // unordered li
+                                                    } else {
+                                                        // ordered list
+                                                        strExportBuff += " 1. "; // ordered li
+                                                    }
+                                                    break;
+                                                case "\\_ht_li*":
+                                                    break; // do nothing
+                                                case "\\fig":
+                                                    console.log("fig - skipping");
+                                                    // move index forward 6 spots (incl. one at the end of this block)
+                                                    j = j + 5;
+                                                    strExportBuff += strTemp;
+                                                    break;
+                                                default:
+                                                    if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
+                                                        // some other closing html tag
+                                                        strExportBuff = strExportBuff.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
+                                                    } else if (markerAry[j].indexOf("\\_ht_") > -1) {
+                                                        if (markerAry[j] === "\\_ht_table") {
+                                                            strExportBuff = strExportBuff.trim() + "\n";
+                                                        }
+                                                        // some other opening html tag
+                                                        strExportBuff += "<";
+                                                        // are there any HTML attributes we need to parse?
+                                                        if (markerAry[j].indexOf("|") > -1) {
+                                                            // yes - iterate through the attributes
+                                                            strExportBuff += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
+                                                            var aryAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1).split("|");
+                                                            for (var k = 0; k < aryAtts.length; k++) {
+                                                                strExportBuff += decodeURIComponent(aryAtts[k]) + " ";
+                                                            }
+                                                        } else {
+                                                            // no - plain html marker
+                                                            strExportBuff = strExportBuff.trim() + markerAry[j].substring(5);
+                                                        }
+                                                        strExportBuff = strExportBuff.trim() + ">";
+                                                    } else {
+                                                        console.log("unknown tag: " + markerAry[j]);
+
+                                                    }
+                                                    break;
+                                            }
+                                        }
+                                        j++;
+                                    }
+                                    // continue any multi-line formatting
+                                    if (bBlockquote === true) {
+                                        strExportBuff += "> ";
+                                    }
+                                    if (bCodeBlock === true) {
+                                        strExportBuff += "    ";
+                                    }
+                                }
+                                // check to see if this sourcephrase is filtered (only looking at the top level)
+                                if (filtered === false) {
+                                    for (idxFilters = 0; idxFilters < filterAry.length; idxFilters++) {
+                                        // sanity check for blank filter strings
+                                        if (filterAry[idxFilters].trim().length > 0) {
+                                            if (value.get("markers").indexOf(filterAry[idxFilters]) >= 0) {
+                                                // this is a filtered sourcephrase -- do not export it
+                                                console.log("filtered: " + value.get("markers"));
+                                                // if there is an end marker associated with this marker,
+                                                // do not export any source phrases until we come across the end marker
+                                                mkr = markerList.where({name: filterAry[idxFilters].trim()});
+                                                if (mkr[0].get("endMarker")) {
+                                                    needsEndMarker = mkr[0].get("endMarker");
+                                                }
+                                                filtered = true;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (value.get("markers").indexOf(needsEndMarker) >= 0) {
+                                    // found our ending marker -- this sourcephrase is not filtered
+                                    needsEndMarker = "";
+                                    filtered = false;
+                                }
+                                if (filtered === false) {
+                                    // only emit soursephrase pre/foll puncts if we have something translated in the target
+                                    if (value.get("source").length > 0 && value.get("target").length > 0) {
+                                        chapterString += strExportBuff + value.get("target") + ONE_SPACE;
+                                        strExportBuff = "";
+                                    }
+                                }
+                            }
+                            // Now take the string from this chapter's sourcephrases that we've just built and
+                            // insert them into the correct location in the file's strContents string
+                            strContents = strContents.replace(("**" + entry.get("chapterid") + "**"), chapterString);
+                            // decrement the chapter count, closing things out if needed
+                            chaptersLeft--;
+                            if (chaptersLeft === 0) {
+                                console.log("finished within sp block");
+                            }
+                        });
+                    } else {
+                        // no sourcephrases to export -- just decrement the chapters, and close things out if needed
+                        chaptersLeft--;
+                        if (chaptersLeft === 0) {
+                            console.log("finished in a blank block");
+                            if (bDirty === false) {
+                                // didn't export anything
+                                exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                                return false;
+                            } 
+                        }
+                    }
+                    if (bDirty === false) {
+                        // didn't export anything
+                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                        return false;                  
+                    }
+                });
+                if (strContents === "") {
+                    // didn't export anything
+                    exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                    return false;
+                } else {
+                    // success
+                    return true;
+                }
+            };
+
+            var buildHTML = function () {
+                var chapters = window.Application.ChapterList.where({bookid: bookid});
+                var spList = new spModel.SourcePhraseCollection();
+                var markerList = new USFM.MarkerCollection();
+                var i = 0;
+                var j = 0;
+                var strTemp = "";
+                var idxFilters = 0;
+                var value = null;
+                var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
+                var lastSPID = window.Application.currentBookmark.get('spid');
+                var chaptersLeft = chapters.length;
+                var filtered = false;
+                var needsEndMarker = "";
+                var mkr = "";
+                var bDirty = false;
+                var arrList = [];
+                var markerAry = [];
+                // get the chapters belonging to our book
+                strContents = HTML_PRE1 + bookName + HTML_PRE2;
+                markerList.fetch({reset: true, data: {name: ""}});
+                console.log("markerList count: " + markerList.length);
+                //lastSPID = lastSPID.substring(lastSPID.lastIndexOf("-") + 1);
+                console.log("filterAry: " + filterAry.toString());
+                chapters.forEach(function (entry) {
+                    // for each chapter with some adaptation done, get the sourcephrases
+                    if (entry.get('lastadapted') !== 0) {
+                        // add a placeholder string for this chapter, so that it ends up in order (the call to
+                        // fetch() is async, and sometimes the chapters are returned out of order)
+                        bDirty = true;
+                        strContents += "**" + entry.get("chapterid") + "**";
+                        spList.fetch({reset: true, data: {chapterid: entry.get("chapterid")}}).done(function () {
+                            var chapterString = "";
+                            console.log("spList: " + spList.length + " items, last id = " + lastSPID);
+                            for (i = 0; i < spList.length; i++) {
+                                value = spList.at(i);
+                                if (value.get("markers").length > 0) {
+                                    j = 0;
+                                    strTemp = "";
+                                    markerAry = value.get("markers").split(" ");
+                                    console.log("buildHTML - unfiltered markers: " + markerAry.length + " ("+ value.get("markers") + ")");
+                                    while (j < markerAry.length) {
+                                        if (markerAry[j].length > 0) {
+                                            switch (markerAry[j]) {
+                                                // newline (only)
+                                                case "\\c":
+                                                case "\\v":
+                                                case "\\h":
+                                                case "\\b":
+                                                    strExportBuff += "<br>";
+                                                    break;
+                                                case "\\p":
+                                                    strExportBuff += "\n<p>";
+                                                    break;
+                                                case "\\bd":
+                                                    strExportBuff += "<b>";
+                                                    break;
+                                                case "\\bd*":
+                                                    strExportBuff = strExportBuff.trim() + "</b>";
+                                                    break;
+                                                case "\\it":
+                                                    strExportBuff += "<i>";
+                                                    break;
+                                                case "\\it*":
+                                                    strExportBuff = strExportBuff.trim() + "</i>";
+                                                    break;
+                                                case "\\mt1":
+                                                    strExportBuff += "\n<h1>"; // h1
+                                                    break;
+                                                case "\\mt2":
+                                                    strExportBuff += "\n<h2>"; // h2
+                                                    break;
+                                                case "\\mt3":
+                                                    strExportBuff += "\n<h3>"; // h3
+                                                    break;
+                                                case "\\mt4":
+                                                    strExportBuff += "\n<h4>"; // h4
+                                                    break;
+                                                case "\\mt5":
+                                                    strExportBuff += "\n<h5>"; // h5
+                                                    break;
+                                                case "\\mt6":
+                                                    strExportBuff += "\n<h6>"; // h6
+                                                    break;
+                                                case "\\esb":
+                                                    strExportBuff += "\n<aside>";
+                                                    break;
+                                                case "\\esbe":
+                                                    strExportBuff = strExportBuff.trim() + "</aside>";
+                                                    break;
+                                                case "\\sup":
+                                                    strExportBuff += "<sup>";
+                                                    break;
+                                                case "\\sup*":
+                                                    strExportBuff = strExportBuff.trim() + "</sup>";
+                                                    break;
+                                                case "\\li":
+                                                    strExportBuff += "\n<li>"; // li from usfm -- just make a ul
+                                                    break;
+                                                case "\\fig":
+                                                    console.log("fig - skipping");
+                                                    // move index forward 6 spots (incl. one at the end of this block)
+                                                    j = j + 5;
+                                                    strExportBuff += strTemp;
+                                                    break;
+                                                default:
+                                                    if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
+                                                        // some other closing html tag
+                                                        strExportBuff = strExportBuff.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
+                                                        // ensure line break after some closing elements
+                                                        if ((markerAry[j] === "\\_ht_table*") || (markerAry[j] === "\\_ht_ul*") || (markerAry[j] === "\\_ht_ol*") ||
+                                                            (markerAry[j] === "\\_ht_p*")) {
+                                                            strExportBuff = strExportBuff.trim() + "\n";
+                                                        }                                                 
+                                                    } else if (markerAry[j].indexOf("\\_ht_") > -1) {
+                                                        // ensure line break before some opening elements
+                                                        if ((markerAry[j] === "\\_ht_table") || (markerAry[j] === "\\_ht_ul") || (markerAry[j] === "\\_ht_ol") ||
+                                                            (markerAry[j] === "\\_ht_li")) {
+                                                            strExportBuff = strExportBuff.trim() + "\n";
+                                                        }
+                                                        // some other opening html tag
+                                                        strExportBuff += "<";
+                                                        // are there any HTML attributes we need to parse?
+                                                        if (markerAry[j].indexOf("|") > -1) {
+                                                            // yes - iterate through the attributes
+                                                            strExportBuff += markerAry[j].substring(5, markerAry[j].indexOf("|")) + " ";
+                                                            var aryAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1).split("|");
+                                                            for (var k = 0; k < aryAtts.length; k++) {
+                                                                strExportBuff += decodeURIComponent(aryAtts[k]) + " ";
+                                                            }
+                                                        } else {
+                                                            // no - plain html marker
+                                                            strExportBuff = strExportBuff.trim() + markerAry[j].substring(5);
+                                                        }
+                                                        strExportBuff = strExportBuff.trim() + ">";
+                                                    } else {
+                                                        console.log("unknown tag: " + markerAry[j]);
+
+                                                    }
+                                                    break;
+                                            }
+                                        }
+                                        j++;
+                                    }
+                                }
+                                // check to see if this sourcephrase is filtered (only looking at the top level)
+                                if (filtered === false) {
+                                    for (idxFilters = 0; idxFilters < filterAry.length; idxFilters++) {
+                                        // sanity check for blank filter strings
+                                        if (filterAry[idxFilters].trim().length > 0) {
+                                            if (value.get("markers").indexOf(filterAry[idxFilters]) >= 0) {
+                                                // this is a filtered sourcephrase -- do not export it
+                                                console.log("filtered: " + value.get("markers"));
+                                                // if there is an end marker associated with this marker,
+                                                // do not export any source phrases until we come across the end marker
+                                                mkr = markerList.where({name: filterAry[idxFilters].trim()});
+                                                if (mkr[0].get("endMarker")) {
+                                                    needsEndMarker = mkr[0].get("endMarker");
+                                                }
+                                                filtered = true;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (value.get("markers").indexOf(needsEndMarker) >= 0) {
+                                    // found our ending marker -- this sourcephrase is not filtered
+                                    needsEndMarker = "";
+                                    filtered = false;
+                                }
+                                if (filtered === false) {
+                                    // only emit soursephrase pre/foll puncts if we have something translated in the target
+                                    if (value.get("source").length > 0 && value.get("target").length > 0) {
+                                        chapterString += strExportBuff + value.get("target") + ONE_SPACE;
+                                        strExportBuff = "";
+                                    }
+                                }
+                            }
+                            // Now take the string from this chapter's sourcephrases that we've just built and
+                            // insert them into the correct location in the file's strContents string
+                            strContents = strContents.replace(("**" + entry.get("chapterid") + "**"), chapterString);
+                            // decrement the chapter count, closing things out if needed
+                            chaptersLeft--;
+                            if (chaptersLeft === 0) {
+                                console.log("finished within sp block");
+                            }
+                        });
+                    } else {
+                        // no sourcephrases to export -- just decrement the chapters, and close things out if needed
+                        chaptersLeft--;
+                        if (chaptersLeft === 0) {
+                            console.log("finished in a blank block");
+                            if (bDirty === false) {
+                                // didn't export anything
+                                exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                                return false;
+                            } 
+                        }
+                    }
+                    if (bDirty === false) {
+                        // didn't export anything
+                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                        return false;                  
+                    }
+                });
+                strContents += HTML_POST;
+                if (strContents === "") {
+                    // didn't export anything
+                    exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                    return false;
+                } else {
+                    // success
+                    return true;
+                }
+            };
+
             // USFM document export (target text)
             var buildUSFM = function () {
                 var chapters = window.Application.ChapterList.where({bookid: bookid});
@@ -4448,6 +5480,7 @@ define(function (require) {
                 var bDirty = false;
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
                 var lastSPID = window.Application.currentBookmark.get('spid');
+                var tmpMarkers = "";
                 console.log("buildUSFM: entry");
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -4465,8 +5498,20 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
+                                // now are there any markers to export?
                                 if (markers !== "") {
-                                    // filter processing
+                                    // marker processing
                                     markers += " "; // add trailing space to handle last marker
                                     // check to see if this sourcephrase is filtered (only looking at the top level)
                                     if (filtered === false) {
@@ -4484,12 +5529,12 @@ define(function (require) {
                                                                 (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id ") > -1) ||
                                                                 (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                                             // pretty-printing -- add a newline so the output looks better
-                                                            chapterString += "\n"; // newline
+                                                            strExportBuff += "\n"; // newline
                                                         }
                                                         // now add the markers and a space
-                                                        chapterString += markers + " ";
+                                                        strExportBuff += markers + " ";
                                                     }
-                                                    chapterString += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
+                                                    strExportBuff += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
                                                     // if there is an end marker associated with this marker,
                                                     // do not export any source phrases until we come across the end marker
                                                     mkr = markerList.where({name: filterAry[idxFilters].trim()});
@@ -4515,25 +5560,20 @@ define(function (require) {
                                     if (markers.trim().length > 0) {
                                         if ((markers.indexOf("\\v") > -1) || (markers.indexOf("\\c") > -1) || (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) || (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                             // pretty-printing -- add a newline so the output looks better
-                                            chapterString += "\n"; // newline
+                                            strExportBuff += "\n"; // newline
                                         }
                                         // now add the markers and a space
-                                        chapterString += markers + " ";
+                                        strExportBuff += markers + " ";
                                     }
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("target").length > 0) {
-                                        chapterString += value.get("target") + " ";
+                                        chapterString += strExportBuff + value.get("target") + " ";
                                     }
                                 }
                                 if (filtered === true && needsEndMarker === "") {
                                     // one-off filter -- turn off filtering
                                     console.log("one-off filter, disabling after: " + value.get("source"));
                                     filtered = false;
-                                }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
@@ -4622,12 +5662,12 @@ define(function (require) {
                                                             (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) ||
                                                             (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                                         // pretty-printing -- add a newline so the output looks better
-                                                        chapterString += "\n"; // newline
+                                                        strExportBuff += "\n"; // newline
                                                     }
                                                     // now add the markers and a space
-                                                    chapterString += markers + " ";
+                                                    strExportBuff += markers + " ";
                                                 }
-                                                chapterString += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
+                                                strExportBuff += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
                                                 // if there is an end marker associated with this marker,
                                                 // do not export any source phrases until we come across the end marker
                                                 mkr = markerList.where({name: filterAry[idxFilters].trim()});
@@ -4652,20 +5692,16 @@ define(function (require) {
                                     if (markers.trim().length > 0) {
                                         if ((markers.indexOf("\\v") > -1) || (markers.indexOf("\\c") > -1) || (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) || (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                             // pretty-printing -- add a newline so the output looks better
-                                            chapterString += "\n"; // newline
+                                            strExportBuff += "\n"; // newline
                                         }
                                         // now add the markers and a space
-                                        chapterString += markers + " ";
+                                        strExportBuff += markers + " ";
                                     }
                                     // only emit soursephrase pre/foll puncts if we have something translated in the gloss
                                     if (value.get("source").length > 0 && value.get("gloss").length > 0) {
-                                        chapterString += value.get("gloss") + " ";
+                                        chapterString += strExportBuff + value.get("gloss") + " ";
+                                        strExportBuff = "";
                                     }
-                                }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
@@ -4754,12 +5790,12 @@ define(function (require) {
                                                             (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) ||
                                                             (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                                         // pretty-printing -- add a newline so the output looks better
-                                                        chapterString += "\n"; // newline
+                                                        strExportBuff += "\n"; // newline
                                                     }
                                                     // now add the markers and a space
-                                                    chapterString += markers + " ";
+                                                    strExportBuff += markers + " ";
                                                 }
-                                                chapterString += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
+                                                strExportBuff += (markers.substr(0, markers.indexOf(filterAry[idxFilters]))) + " ";
                                                 // if there is an end marker associated with this marker,
                                                 // do not export any source phrases until we come across the end marker
                                                 mkr = markerList.where({name: filterAry[idxFilters].trim()});
@@ -4784,20 +5820,16 @@ define(function (require) {
                                     if (markers.trim().length > 0) {
                                         if ((markers.indexOf("\\v") > -1) || (markers.indexOf("\\c") > -1) || (markers.indexOf("\\p") > -1) || (markers.indexOf("\\id") > -1) || (markers.indexOf("\\h") > -1) || (markers.indexOf("\\toc") > -1) || (markers.indexOf("\\mt") > -1)) {
                                             // pretty-printing -- add a newline so the output looks better
-                                            chapterString += "\n"; // newline
+                                            strExportBuff += "\n"; // newline
                                         }
                                         // now add the markers and a space
-                                        chapterString += markers + " ";
+                                        strExportBuff += markers + " ";
                                     }
                                     // only emit soursephrase pre/foll puncts if we have something translated in the target
                                     if (value.get("source").length > 0 && value.get("freetrans").length > 0) {
-                                        chapterString += value.get("freetrans") + " ";
+                                        chapterString += strExportBuff + value.get("freetrans") + " ";
+                                        strExportBuff = "";
                                     }
-                                }
-                                if (value.get('spid') === lastSPID) {
-                                    // done -- quit after this sourcePhrase
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
@@ -5386,12 +6418,6 @@ define(function (require) {
                                             }
                                         }
                                     }
-                                }
-                                // done dealing with the source phrase -- is it the last one?
-                                if (value.get('spid') === lastSPID) {
-                                    // last phrase -- exit
-                                    console.log("Found last SPID: " + lastSPID);
-                                    break;
                                 }
                             }
                             // Now take the string from this chapter's sourcephrases that we've just built and
@@ -6143,6 +7169,12 @@ define(function (require) {
                     case FileTypeEnum.TXT:
                         bResult = buildText();
                         break;
+                    case FileTypeEnum.MD:
+                        bResult = buildMarkdown();
+                        break;
+                    case FileTypeEnum.HTML:
+                        bResult = buildHTML();
+                        break;
                     case FileTypeEnum.USFM:
                         // User could be exporting the translation, gloss, or free translation
                         if (content === contentEnum.GLOSS) {
@@ -6230,6 +7262,12 @@ define(function (require) {
                                 switch (format) {
                                 case FileTypeEnum.TXT:
                                     bResult = buildText();
+                                    break;
+                                case FileTypeEnum.MD:
+                                    bResult = buildMarkdown();
+                                    break;
+                                case FileTypeEnum.HTML:
+                                    bResult = buildHTML();
                                     break;
                                 case FileTypeEnum.USFM:
                                     // User could be exporting the translation, gloss, or free translation
@@ -6770,12 +7808,21 @@ define(function (require) {
                     bOperationDone = false;
                     window.history.go(-1);
                 } else {
+                    // if we happen to have a filename extension on the book name, remove it now
+                    if ((filename.indexOf(".xml") > -1) || (filename.indexOf(".txt") > -1) || (filename.indexOf(".sfm") > -1) || (filename.indexOf(".usx") > -1) ||
+                        (filename.indexOf(".usfm") > -1) || (filename.indexOf(".md") > -1) || (filename.indexOf(".htm") > -1) || (filename.indexOf(".html") > -1)) {
+                        filename = filename.substring(0, filename.lastIndexOf("."));
+                    }
                     var format = FileTypeEnum.TXT;
                     // build the suggested filename based on the file type
                     if ($("#buildAIDocXML").is(":checked")) {
                         filename += ".xml";
                     } else if ($("#buildUSX").is(":checked")) {
                         filename += ".usx";
+                    } else if ($("#buildMD").is(":checked")) {
+                        filename += ".md";
+                    } else if ($("#buildHTML").is(":checked")) {
+                        filename += ".html";
                     } else if ($("#buildUSFM").is(":checked")) {
                         filename += ".sfm";
                     } else if ($("#buildKBXMLTMX").is(":checked")) {
@@ -6814,6 +7861,10 @@ define(function (require) {
                             format = FileTypeEnum.USX;
                         } else if ($("#buildUSFM").is(":checked")) {
                             format = FileTypeEnum.USFM;
+                        } else if ($("#buildMD").is(":checked")) {
+                            format = FileTypeEnum.MD;
+                        } else if ($("#buildHTML").is(":checked")) {
+                            format = FileTypeEnum.HTML;
                         } else if ($("#buildKBXMLXML").is(":checked")) {
                             format = FileTypeEnum.KBXML;
                         } else if ($("#buildKBXMLTMX").is(":checked")) {
@@ -6916,15 +7967,16 @@ define(function (require) {
                     // Is the "show gloss and FT" check selected?
                     if (localStorage.getItem("ShowGlossFT") && localStorage.getItem("ShowGlossFT") === "true") {
                         console.log("User has gloss/FT enabled -- need to ask what they want to export");
-                        // "show gloss and FT" is selected -- user might want to export the gloaa or FT instead of the document
+                        // "show gloss and FT" is selected -- user might want to export the gloss or FT instead of the document
                         // Now show the Export Content page to find out what they want to export from this document
                         // show the next screen
                         $("#lblExportDirections").html(i18n.t('view.lblSelectContent'));
                         $("#Container").html(Handlebars.compile(tplExportContent));
                         // remove any file extension found on the book name
                         if (bookName.length > 0) {
-                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1)) {
-                                bookName = bookName.substr(0, bookName.length - 4);
+                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1) ||
+                                (bookName.indexOf(".usfm") > -1) || (bookName.indexOf(".md") > -1) || (bookName.indexOf(".htm") > -1) || (bookName.indexOf(".html") > -1)) {
+                                bookName = bookName.substring(0, bookName.lastIndexOf("."));
                             }
                         }
                     } else {
@@ -6938,8 +7990,9 @@ define(function (require) {
                         }
                         // remove any file extension on the book name
                         if (bookName.length > 0) {
-                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1)) {
-                                bookName = bookName.substr(0, bookName.length - 4);
+                            if ((bookName.indexOf(".xml") > -1) || (bookName.indexOf(".txt") > -1) || (bookName.indexOf(".sfm") > -1) || (bookName.indexOf(".usx") > -1) ||
+                                (bookName.indexOf(".usfm") > -1) || (bookName.indexOf(".md") > -1) || (bookName.indexOf(".htm") > -1) || (bookName.indexOf(".html") > -1)) {
+                                bookName = bookName.substring(0, bookName.lastIndexOf("."));
                             }
                         }
                         // select a default of TXT for the export format (for now)

@@ -157,7 +157,17 @@ define(function (require) {
                 // only check KB if we have a current project defined
                 if (window.Application.currentProject) {
                     if (window.Application.kbList.length === 0) {
-                        window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}});
+                        window.Application.kbList.fetch({reset: true, data: {projectid: window.Application.currentProject.get('projectid'), isGloss: 0}}).then(function() {
+                            console.log("homeView/fetch TU returned");
+                            if (window.Application.kbList.length > 0) {
+                                console.log("kblist not empty");
+                                if (($("#liExport").hasClass("hide"))) {
+                                    // show export action
+                                    console.log("HomeView::onShow() - showing export action");
+                                    $("#liExport").removeClass("hide");
+                                }
+                            }
+                        });
                     }
                     if (window.Application.BookList.length === 0) {
                         window.Application.BookList.fetch({reset: true, data: {projectid: window.Application.currentProject.get("projectid")}});
@@ -185,11 +195,12 @@ define(function (require) {
                     // Show the search and adapt links, and optionally the export link (if there's something in the KB)
                     var tuCount = window.Application.kbList.length;
                     var projectid = window.Application.currentProject.get('projectid');
-                    var str = "";
-                    if (tuCount > 0) {
-                        // at least some translation done -- show the export link
-                        str += '<li class="topcoat-list__item"><a class="big-link" id="export" title="' + i18n.t("view.lblExport") + '" href="#export/' + projectid + '"><span class="btn-export"></span><span id="lblExport">' + i18n.t('view.lblExport') + '</span><span class="chevron"></span></a></li>';
+                    var str = '<li id="liExport" class="topcoat-list__item';
+                    if (tuCount === 0) {
+                        // no translation done -- hide the export link
+                        str += ' hide';
                     }
+                    str += '"><a class="big-link" id="export" title="' + i18n.t("view.lblExport") + '" href="#export/' + projectid + '"><span class="btn-export"></span><span id="lblExport">' + i18n.t('view.lblExport') + '</span><span class="chevron"></span></a></li>';
                     // show the search and adapt links 
                     str += '<li class="topcoat-list__item"><a class="big-link" id="search" title="' + i18n.t('view.dscSearch') + '" href="#search/' + projectid + '"><span class="btn-book"></span>' + i18n.t('view.lblSearch') + '<span class="chevron"></span></a></li>';
                     // build the adapt link from the current bookmark, if there is one

@@ -255,6 +255,8 @@
         "lblbuildUSFM": "Paratext / Bibledit (.sfm)",
         "lblbuildUSX": "Paratext (.usx)",
         "lblbuildText": "Plain Text (.txt)",
+        "lblbuildMarkdown": "Markdown (.md)",
+        "lblbuildHTML": "HTML (.htm)",
         "lblExportFilename": "Filename:",
         "lblDocSelected": "Document selected: ",
         "dscFile": "File: __file__",
@@ -387,6 +389,8 @@
         "msgUseProject": "Do you want to switch to this project?",
         "ErrNotAIC": "Project data not found. (Is this an Adapt It desktop project (.aic) file?)",
         "ErrCopyProjectFailed": "Unable to copy project. Reason: __reason__",
+        "lblMD": "Markdown (.md)",
+        "lblHTML": "HTML (.html)",
         "_comment" : "****Add new strings BEFORE this line!****"
     },
     "help": {

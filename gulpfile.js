@@ -12,7 +12,7 @@ const { src, dest } = require('gulp');
 
 const paths = {
     js_src: './www/js/**/*',
-    js_src_files: './www/js/***/*.js',
+    js_src_files: './www/js/**/*.js',
     js_dest: './www/js',
     js_bak: './www_js_bak',
     android_apk: './platforms/android/app/build/outputs/apk/***/*.apk',
@@ -37,7 +37,7 @@ function minify_js() { // stream
 async function restore_js() {
     log('** Restoring js files from ' + paths.js_bak + '\n');
     await del.deleteAsync([paths.js_dest]);
-    return src(paths.js_bak + '/**/*').pipe(dest(paths.js_dest));
+    return src(paths.js_bak).pipe(dest(paths.js_src));
 };
 
 // Clean up the backup folder
@@ -151,10 +151,10 @@ exports.android = series(
 // CI build (Android debug)
 exports.ci_build = series(
     prep_android_dir,
-    // backup_js,
-    // minify_js,
+    backup_js,
+    minify_js,
     build_android_debug, 
-    // restore_js,
+    restore_js,
     // clean_backup,
     copyAndroidArtifact
 );

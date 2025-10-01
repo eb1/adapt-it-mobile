@@ -1434,6 +1434,22 @@ div.preview div.pile {
 div.specialtext div.source {
 	color: #aa0000; /* red */
 }
+/* usfm character variants; see HandlebarHelpers.classes helper for generation */
+div.fmt_i div.source {
+    font-style: italic;
+}
+div.fmt_b div.source {
+    font-weight: bold;
+}
+div.fmt_u div.source {
+    text-decoration: underline;
+}
+div.fmt_sc div.source {
+    font-variant: small-caps;
+}
+div.fmt_sup div.source {
+    font-variant-position: super;
+}
 .retranslation {
 	color: #996633; /* brown */
 }

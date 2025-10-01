@@ -255,6 +255,8 @@
         "lblbuildUSFM": "Paratext / Bibledit (.sfm)",
         "lblbuildUSX": "Paratext (.usx)",
         "lblbuildText": "Texto (.txt)",
+        "lblbuildMarkdown": "Markdown (.md)",
+        "lblbuildHTML": "HTML (.htm)",
         "lblExportFilename": "Nome do arquivo:",
         "lblDocSelected": "Documento selecionado: ",
         "errNoFilename": "Por favor insira um nome de arquivo.",
@@ -387,6 +389,8 @@
         "msgUseProject": "Você quer mudar para este projeto?",
         "ErrNotAIC": "Dados do projeto não encontrados. (Este é um arquivo de projeto Adapt It (.aic)?)",
         "ErrCopyProjectFailed": "Não foi possível copiar o projeto. Razão: __reason__",
+        "lblMD": "Markdown (.md)",
+        "lblHTML": "HTML (.html)",
         "_comment" : "****Add new strings BEFORE this line!****"
     },
     "help": {

@@ -34,6 +34,7 @@ require.config({
         // libraries
         'backbone': 'backbone-min',
         'hammerjs': 'hammer',
+        'marked': 'marked.umd',
         'handlebars': 'handlebars.min-v4.7.8',
         'jquery-hammerjs': 'jquery.hammer',
         'babysitter': 'babysitter.min',
