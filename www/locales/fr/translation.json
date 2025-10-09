@@ -218,7 +218,7 @@
         "dscStatusImportSuccess": "Fichier \"__document__\" lue.",
         "dscStatusProjImportSuccess": "Projet \"__document__\" lue.",
         "ttlFilteredText": "Texte filtré",
-        "dscFilterMarker": "USFM marqueur: ",
+        "dscFilterMarker": "Marqueur: ",
         "dscFilteredText": "Texte: ",
         "dscUserCanSetFilter": "Le texte associé avec \"__marker__\" est disponible pour l'adaptation, en Les paramètres de projet.",
         "dscUserCannotSetFilter": "Le texte associé avec \"__marker__\" n'est pas disponible pour l'adaptation.",

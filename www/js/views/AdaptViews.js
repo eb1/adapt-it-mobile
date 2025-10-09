@@ -2180,6 +2180,13 @@ define(function (require) {
                                 markers.push(aryClasses[idx].substr(5));
                             }
                         }
+                        else if (aryClasses[idx].indexOf("_ht_") >= 0) {
+                            // html class -- is it a cause of this filter?
+                            if (filterString.indexOf(aryClasses[idx].substr(4)) >= 0) {
+                                // this marker is filtered -- add it to the markers
+                                markers.push(aryClasses[idx]);
+                            }
+                        }
                     }
                     // Look them up in the USFM table -- are they settable?
                     USFMMarkers.each(function (item, index2, list) {

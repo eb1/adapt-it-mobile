@@ -2413,6 +2413,29 @@ define(function (require) {
                 description: "Hidden Note",
                 filter: "1",
                 userCanSetFilter: "0"
+            },
+            {
+                name: "_ht_script",
+                endMarker: "_ht_style*",
+                type: "note",
+                description: "HTML script",
+                filter: "1",
+                userCanSetFilter: "0"
+            },
+            {
+                name: "_ht_style",
+                endMarker: "_ht_style*",
+                type: "note",
+                description: "HTML style rules",
+                filter: "1",
+                userCanSetFilter: "0"
+            },
+            {
+                name: "_ht_meta",
+                type: "note",
+                description: "HTML style rules",
+                filter: "1",
+                userCanSetFilter: "0"
             }
         ],
 

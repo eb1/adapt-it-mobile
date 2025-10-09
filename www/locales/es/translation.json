@@ -218,7 +218,7 @@
         "dscStatusImportSuccess": "El archivo \"__document__\" se ha leído correctamente.",
         "dscStatusProjImportSuccess": "Projecto \"__document__\" se ha leído correctamente.",
         "ttlFilteredText": "Texto filtrada",
-        "dscFilterMarker": "Marcador USFM: ",
+        "dscFilterMarker": "Marcador: ",
         "dscFilteredText": "Texto: ",
         "dscUserCanSetFilter": "Este Texto puede ser capacitado para la adaptación, en la Configuración del Proyecto.",
         "dscUserCannotSetFilter": "El Texto de \"__marker__\" no puede ser capacitado para la adaptación.",
