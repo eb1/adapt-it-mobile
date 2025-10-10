@@ -3026,7 +3026,6 @@ define(function (require) {
                             case "area":
                             case "article":
                             case "audio":
-                            case "base":
                             case "basefont":
                             case "bdi":
                             case "bdo":
@@ -3083,7 +3082,6 @@ define(function (require) {
                             case "mark":
                             case "marquee":
                             case "menuitem":
-                            case "meta":
                             case "meter":
                             case "nav":
                             case "nobreak":
@@ -3105,7 +3103,6 @@ define(function (require) {
                             case "ruby":
                             case "s":
                             case "samp":
-                            case "script":
                             case "section":
                             case "small":
                             case "source":
@@ -3132,7 +3129,6 @@ define(function (require) {
                             case "video":
                             case "wbr":
                             case "xmp":
-                            case "link":
                                 // build a marker containing the name and attributes (if any)
                                 // for this HTML tag
                                 if (htmlTag === "code") {
@@ -3160,6 +3156,9 @@ define(function (require) {
                                 break;
                             
                             // filtered tags -- run to the ending tag, and place the entire thing in 1 sourcephrase
+                            // (so far, these are just the tags in the html <head>)
+                            case "base":
+                            case "link":
                             case "meta":
                             case "script":
                             case "style":
@@ -3172,7 +3171,8 @@ define(function (require) {
                                 }
                                 // add the marker
                                 markers += "\\_ht_" + htmlTag + " ";
-
+                                // reset htmlTag to test for closing marker
+                                htmlTag = $(element)[0].tagName.toLowerCase();
                                 // add the closing marker
                                 if (!voidElts.includes(htmlTag)) {
                                     markers += "\\_ht_" + htmlTag + "* ";
@@ -3182,6 +3182,9 @@ define(function (require) {
                                 if ($(element).contents().length > 0) {
                                     s = $(element).html();
                                     console.log("filtered text: " + s);
+                                }
+                                if (s.length === 0) {
+                                    return; // filtered block with no children -- jump out and keep going
                                 }
                                 sp = new spModel.SourcePhrase({
                                     spid: spID,
@@ -3199,6 +3202,7 @@ define(function (require) {
                                 markers = "";
                                 prepuncts = "";
                                 follpuncts = "";
+                                s = "";
                                 punctIdx = 0;
                                 index++;
                                 norder++;
@@ -3262,6 +3266,7 @@ define(function (require) {
                                         markers = "";
                                         prepuncts = "";
                                         follpuncts = "";
+                                        s = "";
                                         punctIdx = 0;
                                         index++;
                                         norder++;
@@ -3330,6 +3335,7 @@ define(function (require) {
                                         markers = "";
                                         prepuncts = "";
                                         follpuncts = "";
+                                        s = "";
                                         punctIdx = 0;
                                         index++;
                                         norder++;

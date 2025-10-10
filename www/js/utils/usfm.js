@@ -2414,9 +2414,24 @@ define(function (require) {
                 filter: "1",
                 userCanSetFilter: "0"
             },
+            // HTML filtered tags: mostly just the html head element items
+            {
+                name: "_ht_base",
+                type: "note",
+                description: "HTML base URL and target",
+                filter: "1",
+                userCanSetFilter: "0"
+            },
+            {
+                name: "_ht_link",
+                type: "note",
+                description: "HTML external document links",
+                filter: "1",
+                userCanSetFilter: "0"
+            },
             {
                 name: "_ht_script",
-                endMarker: "_ht_style*",
+                endMarker: "_ht_script*",
                 type: "note",
                 description: "HTML script",
                 filter: "1",

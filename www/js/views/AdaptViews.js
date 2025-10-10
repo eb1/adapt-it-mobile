@@ -19,6 +19,9 @@ define(function (require) {
 
     "use strict";
 
+        // HTML markers that are filtered out of the UI
+    const HT_MARKERS = " \\_ht_link \\_ht_base \\_ht_script \\_ht_meta \\_ht_style ";
+
     var $           = require('jquery'),
         Underscore  = require('underscore'),
         Handlebars  = require('handlebars'),
@@ -2153,7 +2156,7 @@ define(function (require) {
                     }
                 }
                 var userCanSetFilter = false,
-                    filterString = window.Application.filterList,
+                    filterString = window.Application.filterList + HT_MARKERS,
                     markers = [],
                     aryClasses = [],
                     filteredText = "",
@@ -2177,14 +2180,14 @@ define(function (require) {
                             // usfm class -- is it a cause of this filter?
                             if (filterString.indexOf(aryClasses[idx].substr(5)) >= 0) {
                                 // this marker is filtered -- add it to the markers
-                                markers.push(aryClasses[idx].substr(5));
+                                markers.push(aryClasses[idx].substr(5) + " ");
                             }
                         }
                         else if (aryClasses[idx].indexOf("_ht_") >= 0) {
                             // html class -- is it a cause of this filter?
                             if (filterString.indexOf(aryClasses[idx].substr(4)) >= 0) {
                                 // this marker is filtered -- add it to the markers
-                                markers.push(aryClasses[idx]);
+                                markers.push(aryClasses[idx] + " ");
                             }
                         }
                     }
@@ -2203,7 +2206,7 @@ define(function (require) {
                     });
                     // push new object onto Filters array
                     aryFilters.push({
-                        marker: markers.toString(),
+                        marker: markers.toString().trim(),
                         text: filteredText.trim(),
                         canSet: userCanSetFilter
                     });

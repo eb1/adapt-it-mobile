@@ -18,6 +18,9 @@ define(function (require) {
         isSuperscript = false,
         i18n        = require('i18n');
     
+    // HTML markers that are filtered out of the UI
+    const HT_MARKERS = " \\_ht_link \\_ht_base \\_ht_script \\_ht_meta \\_ht_style ";
+
     // Return the localized string corresponding to the specified key.
     Handlebars.registerHelper('t', function (i18n_key) {
         var result = i18n.t(i18n_key);
@@ -59,7 +62,7 @@ define(function (require) {
             tmpString = "",
             marker = "",
             tmpMkr = this.markers + " ", // add a space for format check below
-            filterString = window.Application.filterList + " \\_ht_script \\_ht_meta \\_ht_style ", // AIM 1.9 - AIM's 2 filters
+            filterString = window.Application.filterList + HT_MARKERS,
             newID = window.Application.generateUUID(),
             hasSpecialText = false,
             strTmpMarker = "",
@@ -222,7 +225,7 @@ define(function (require) {
     // http://stackoverflow.com/questions/8853396/logical-operator-in-a-handlebars-js-if-conditional
     Handlebars.registerHelper('ifCond', function (v1, operator, v2, options) {
         var ary = null,
-            filterString = window.Application.filterList + " \\_ht_script \\_ht_meta \\_ht_style ", // AIM 1.9 - AIM's 2 filters
+            filterString = window.Application.filterList + HT_MARKERS,
             i = 0,
             marker = "",
             elts = [];
