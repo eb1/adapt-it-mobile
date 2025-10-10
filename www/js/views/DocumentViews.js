@@ -3163,12 +3163,27 @@ define(function (require) {
                             case "script":
                             case "style":
                                 console.log("filtered element: " + htmlTag);
-                                if ($(element)[0].attributes.length > 0) {
-                                    // this tag has attributes -- add them to the sourcephrase
-                                    $.each($(element)[0].attributes, function(i, att) {
-                                        htmlTag += "|\"" + encodeURIComponent(att.name) + "\"=\"" + encodeURIComponent(att.value) + "\"";
-                                })
+                                // if there are child elements, add them all as a single source phrase;
+                                // if not, try to add the attributes as a single source phrase
+                                if ($(element).contents().length > 0) {
+                                    s = $(element).html();
+                                    // for tags with children, add the attributes as part of the markers
+                                    if ($(element)[0].attributes.length > 0) {
+                                        // this tag has attributes -- add them to the sourcephrase
+                                        $.each($(element)[0].attributes, function(i, att) {
+                                            htmlTag += "|\"" + encodeURIComponent(att.name) + "\"=\"" + encodeURIComponent(att.value) + "\"";
+                                        })
+                                    }
+                                } else {
+                                    if ($(element)[0].attributes.length > 0) {
+                                        // this tag has attributes -- add them to the sourcephrase
+                                        s = "";
+                                        $.each($(element)[0].attributes, function(i, att) {
+                                            s += "|\"" + encodeURIComponent(att.name) + "\"=\"" + encodeURIComponent(att.value) + "\"";
+                                        })
+                                    }
                                 }
+                                console.log("filtered text: " + s);
                                 // add the marker
                                 markers += "\\_ht_" + htmlTag + " ";
                                 // reset htmlTag to test for closing marker
@@ -3177,15 +3192,10 @@ define(function (require) {
                                 if (!voidElts.includes(htmlTag)) {
                                     markers += "\\_ht_" + htmlTag + "* ";
                                 } 
-
-                                // add all the child elements as a single source phrase
-                                if ($(element).contents().length > 0) {
-                                    s = $(element).html();
-                                    console.log("filtered text: " + s);
-                                }
                                 if (s.length === 0) {
-                                    return; // filtered block with no children -- jump out and keep going
+                                    return; // nothing filtered -- jump out and keep going
                                 }
+                                spID = window.Application.generateUUID();
                                 sp = new spModel.SourcePhrase({
                                     spid: spID,
                                     norder: norder,

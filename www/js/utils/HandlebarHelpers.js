@@ -150,9 +150,9 @@ define(function (require) {
                 } else {
                     // USFM marker
                     result += "usfm-" + ary[i].substring(0, (ary[i].indexOf(" ") === -1) ? ary[i].length : ary[i].indexOf(" "));
-                }
-                if (filterString.indexOf("\\" + marker + " ") >= 0){
-                    filtered = true;
+                    if (filterString.indexOf("\\" + marker + " ") >= 0){
+                        filtered = true;
+                    }
                 }
                 // check for special text
                 if (SpecialTextMarkers.indexOf(" " + marker + " ") > -1) {
@@ -240,7 +240,10 @@ define(function (require) {
             for (i = 0; i < ary.length; i++) {
                 marker = ary[i].trim();
                 if (marker.length > 0) {
-                    if ((filterString.indexOf("\\" + marker + " ") >= 0) || (filterString.indexOf("\\" + marker + "|") >= 0)){
+                    if (marker.indexOf("|") >= 0) {
+                        marker = marker.substring(0, marker.indexOf("|"));
+                    }
+                    if (filterString.indexOf("\\" + marker + " ") >= 0) {
                         return options.inverse(this);
                     }
                 }
@@ -253,7 +256,7 @@ define(function (require) {
         case 'contains':
             elts = v2.split(',');
             for (i = 0; i < elts.length; i++) {
-                if (v1.indexOf(elts[i]) !== -1) {
+                if (v1.indexOf("\\" + elts[i]) !== -1) {
                     return options.fn(this);
                 }
             }
