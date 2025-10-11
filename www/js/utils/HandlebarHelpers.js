@@ -18,6 +18,9 @@ define(function (require) {
         isSuperscript = false,
         i18n        = require('i18n');
     
+    // HTML markers that are filtered out of the UI
+    const HT_MARKERS = " \\_ht_link \\_ht_base \\_ht_script \\_ht_meta \\_ht_style ";
+
     // Return the localized string corresponding to the specified key.
     Handlebars.registerHelper('t', function (i18n_key) {
         var result = i18n.t(i18n_key);
@@ -59,9 +62,10 @@ define(function (require) {
             tmpString = "",
             marker = "",
             tmpMkr = this.markers + " ", // add a space for format check below
-            filterString = window.Application.filterList + " \\aim_ \\aim_e", // AIM 1.9 - AIM's 2 filters
+            filterString = window.Application.filterList + HT_MARKERS,
             newID = window.Application.generateUUID(),
             hasSpecialText = false,
+            strTmpMarker = "",
             SpecialTextMarkers = " _heading_base _intro_base _list_base _notes_base _peripherals_base at add bn br bt cap efm ef d di div dvrf f fe fr fk fq fqa fl fp ft fdc fv fw fm free gm gs gd gp h h1 h2 h3 hr usfm id imt imt1 imt2 imt3 imt4 imte imte1 imte2 is is1 is2 ip ipi ipq ipr iq iq1 iq2 iq3 im imi ili ili1 ili2 imq ib iot io io1 io2 io3 io4 ior iex iqt ie k1 k2 lit mr ms ms1 ms2 ms3 mt mt1 mt2 mt3 mt4 mt5 mt6 mte mte1 mte2 nc nt note p1 p2 pm pmc pmr pt ps pp pq r rem rr rq s s1 s2 s3 s4 sp sr sx sts",
             i = 0;
         // if no markers are present, add any special text info and exit
@@ -135,9 +139,20 @@ define(function (require) {
             }
             marker = ary[i].trim();
             if (marker.length > 0) {
-                result += "usfm-" + ary[i].substring(0, (ary[i].indexOf(" ") === -1) ? ary[i].length : ary[i].indexOf(" "));
-                if (filterString.indexOf("\\" + marker + " ") >= 0) {
-                    filtered = true;
+                if (marker.indexOf("_ht_") >= 0) {
+                    // strip out any html attributes (starting with |) before checking filter
+                    strTmpMarker = marker.substring(0, (marker.indexOf("|")>= 0) ? marker.indexOf("|") : marker.length);
+                    // HTML tag - don't adjust
+                    result += strTmpMarker; //ary[i].substring(0, (ary[i].indexOf(" ") === -1) ? ary[i].length : ary[i].indexOf(" "));
+                    if (filterString.indexOf("\\" + strTmpMarker + " ") >= 0){
+                        filtered = true;
+                    }
+                } else {
+                    // USFM marker
+                    result += "usfm-" + ary[i].substring(0, (ary[i].indexOf(" ") === -1) ? ary[i].length : ary[i].indexOf(" "));
+                    if (filterString.indexOf("\\" + marker + " ") >= 0){
+                        filtered = true;
+                    }
                 }
                 // check for special text
                 if (SpecialTextMarkers.indexOf(" " + marker + " ") > -1) {
@@ -163,7 +178,7 @@ define(function (require) {
                 result += "moreFilter ";
             } else {
                 // new filter -- create an ID
-                filterID = "fid-" + newID.toString();
+                filterID = "fid-" + newID.toString() + " ";
             }
             result += filterID;
         } else {
@@ -210,7 +225,7 @@ define(function (require) {
     // http://stackoverflow.com/questions/8853396/logical-operator-in-a-handlebars-js-if-conditional
     Handlebars.registerHelper('ifCond', function (v1, operator, v2, options) {
         var ary = null,
-            filterString = window.Application.filterList + " \\aim_ \\aim_e", // AIM 1.9 - AIM's 2 filters
+            filterString = window.Application.filterList + HT_MARKERS,
             i = 0,
             marker = "",
             elts = [];
@@ -225,6 +240,9 @@ define(function (require) {
             for (i = 0; i < ary.length; i++) {
                 marker = ary[i].trim();
                 if (marker.length > 0) {
+                    if (marker.indexOf("|") >= 0) {
+                        marker = marker.substring(0, marker.indexOf("|"));
+                    }
                     if (filterString.indexOf("\\" + marker + " ") >= 0) {
                         return options.inverse(this);
                     }
@@ -238,7 +256,7 @@ define(function (require) {
         case 'contains':
             elts = v2.split(',');
             for (i = 0; i < elts.length; i++) {
-                if (v1.indexOf(elts[i]) !== -1) {
+                if (v1.indexOf("\\" + elts[i]) !== -1) {
                     return options.fn(this);
                 }
             }

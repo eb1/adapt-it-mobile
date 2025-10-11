@@ -2923,6 +2923,7 @@ define(function (require) {
                     var sp = null;
                     var htmlTag = "";
                     var chaps = [];
+                    var s = "";
                     var arrHTML = $.parseHTML(contents);
                     var chapterName = "";
                     var nodeStyle = "";
@@ -2930,6 +2931,20 @@ define(function (require) {
                     var bCodeBlock = false;
                     var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
                     console.log("Reading HTML file:" + fileName);
+                    if (fileName.indexOf(i18n.t("view.lblText") + "-") > -1) {
+                        // "Text-{guid}" clipboard snippet name
+                        bookName = fileName;
+                    } else {
+                        // not a clipboard snippet -- does it have a file extension?
+                        if (fileName.indexOf(".") > -1) {
+                            // has an extension -- remove it for our book name guess
+                            bookName = fileName.substring(0, fileName.lastIndexOf('.'));
+                        } else {
+                            // no extension -- use it as-is for our book name guess
+                            bookName = fileName;
+                        }
+                    }
+
                     var parseNode = function (element) {
                         nodeStyle = "";
                         console.log("parseNode - Element type: " + $(element)[0].nodeType)
@@ -3011,7 +3026,6 @@ define(function (require) {
                             case "area":
                             case "article":
                             case "audio":
-                            case "base":
                             case "basefont":
                             case "bdi":
                             case "bdo":
@@ -3068,7 +3082,6 @@ define(function (require) {
                             case "mark":
                             case "marquee":
                             case "menuitem":
-                            case "meta":
                             case "meter":
                             case "nav":
                             case "nobreak":
@@ -3090,14 +3103,12 @@ define(function (require) {
                             case "ruby":
                             case "s":
                             case "samp":
-                            case "script":
                             case "section":
                             case "small":
                             case "source":
                             case "spacer":
                             case "span":
                             case "strike":
-                            case "style":
                             case "sub":
                             case "summary":
                             case "svg":
@@ -3118,7 +3129,6 @@ define(function (require) {
                             case "video":
                             case "wbr":
                             case "xmp":
-                            case "link":
                                 // build a marker containing the name and attributes (if any)
                                 // for this HTML tag
                                 if (htmlTag === "code") {
@@ -3144,6 +3154,79 @@ define(function (require) {
                                 // add the marker
                                 markers += "\\_ht_" + htmlTag + " ";
                                 break;
+                            
+                            // filtered tags -- run to the ending tag, and place the entire thing in 1 sourcephrase
+                            // (so far, these are just the tags in the html <head>)
+                            case "base":
+                            case "link":
+                            case "meta":
+                            case "script":
+                            case "style":
+                                console.log("filtered element: " + htmlTag);
+                                // if there are child elements, add them all as a single source phrase;
+                                // if not, try to add the attributes as a single source phrase
+                                if ($(element).contents().length > 0) {
+                                    s = $(element).html();
+                                    // for tags with children, add the attributes as part of the markers
+                                    if ($(element)[0].attributes.length > 0) {
+                                        // this tag has attributes -- add them to the sourcephrase
+                                        $.each($(element)[0].attributes, function(i, att) {
+                                            htmlTag += "|\"" + encodeURIComponent(att.name) + "\"=\"" + encodeURIComponent(att.value) + "\"";
+                                        })
+                                    }
+                                } else {
+                                    if ($(element)[0].attributes.length > 0) {
+                                        // this tag has attributes -- add them to the sourcephrase
+                                        s = "";
+                                        $.each($(element)[0].attributes, function(i, att) {
+                                            s += "|\"" + encodeURIComponent(att.name) + "\"=\"" + encodeURIComponent(att.value) + "\"";
+                                        })
+                                    }
+                                }
+                                console.log("filtered text: " + s);
+                                // add the marker
+                                markers += "\\_ht_" + htmlTag + " ";
+                                // reset htmlTag to test for closing marker
+                                htmlTag = $(element)[0].tagName.toLowerCase();
+                                // add the closing marker
+                                if (!voidElts.includes(htmlTag)) {
+                                    markers += "\\_ht_" + htmlTag + "* ";
+                                } 
+                                if (s.length === 0) {
+                                    return; // nothing filtered -- jump out and keep going
+                                }
+                                spID = window.Application.generateUUID();
+                                sp = new spModel.SourcePhrase({
+                                    spid: spID,
+                                    norder: norder,
+                                    chapterid: chapterID,
+                                    vid: verseID,
+                                    markers: markers,
+                                    orig: null,
+                                    prepuncts: prepuncts,
+                                    midpuncts: midpuncts,
+                                    follpuncts: follpuncts,
+                                    source: s,
+                                    target: ""
+                                });
+                                markers = "";
+                                prepuncts = "";
+                                follpuncts = "";
+                                s = "";
+                                punctIdx = 0;
+                                index++;
+                                norder++;
+                                sps.push(sp);
+                                // if necessary, send the next batch of SourcePhrase INSERT transactions
+                                if ((sps.length % MAX_BATCH) === 0) {
+                                    batchesSent++;
+                                    updateStatus(i18n.t("view.dscStatusSaving", {number: batchesSent, details: i18n.t("view.detailChapterVerse", {chap: chapterName, verse: verseCount})}), 0);
+                                    deferreds.push(sourcePhrases.addBatch(sps.slice(sps.length - MAX_BATCH)));
+                                    deferreds[deferreds.length - 1].done(function() {
+                                        updateStatus(i18n.t("view.dscStatusSavingProgress", {number: deferreds.length, total: batchesSent}), Math.floor(deferreds.length / batchesSent * 100));
+                                    });    
+                                }
+                                return; // jump out of this block
 
                             default:
                                 console.log("WARN: skipping tag - " + $(element)[0].tagName.toLowerCase());
@@ -3193,6 +3276,7 @@ define(function (require) {
                                         markers = "";
                                         prepuncts = "";
                                         follpuncts = "";
+                                        s = "";
                                         punctIdx = 0;
                                         index++;
                                         norder++;
@@ -3261,6 +3345,7 @@ define(function (require) {
                                         markers = "";
                                         prepuncts = "";
                                         follpuncts = "";
+                                        s = "";
                                         punctIdx = 0;
                                         index++;
                                         norder++;
@@ -3302,7 +3387,7 @@ define(function (require) {
                         }
                     };
 
-                    index = contents.indexOf("<body>");
+                    index = contents.indexOf("<body");
                     if (index === -1) {
                         // not html we can work with (no body element)
                         return false;

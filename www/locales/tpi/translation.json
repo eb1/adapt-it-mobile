@@ -218,7 +218,7 @@
         "dscStatusImportSuccess": "Fail \"__document__\" ritim gut pinis.",
         "dscStatusProjImportSuccess": "Projek \"__document__\" ritim gut pinis.",
         "ttlFilteredText": "Filta (hait) teks",
-        "dscFilterMarker": "USFM Maka: ",
+        "dscFilterMarker": "Maka: ",
         "dscFilteredText": "Teks bilong filta maka: ",
         "dscUserCanSetFilter": "Dispela teks i ken kamap insait long wok trenslesen. Lukim USFM Filta.",
         "dscUserCannotSetFilter": "Teks bilong \"__marker__\" maka i no inap kamap insait long wok trenslesen.",
