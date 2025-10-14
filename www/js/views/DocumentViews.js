@@ -3265,7 +3265,6 @@ define(function (require) {
                                     if (arr[i] === "<p>") {
                                         // newline -- make a note and keep going
                                         markers += "\\b ";
-                                        arrClosing.push("*"); // no closing tag
                                         i++;
                                     } else {
                                         spID = window.Application.generateUUID();
