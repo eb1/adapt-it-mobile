@@ -2931,9 +2931,19 @@ define(function (require) {
                     var bCodeBlock = false;
                     var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
                     console.log("Reading HTML file:" + fileName);
+                    // set the bookName
                     if (fileName.indexOf(i18n.t("view.lblText") + "-") > -1) {
-                        // "Text-{guid}" clipboard snippet name
-                        bookName = fileName;
+                        // clipboard snippet -- try to find the <title> tag
+                        if (contents.indexOf("<title") >= 0) {
+                            bookName = contents.substring(contents.indexOf("<title>") + 7, contents.indexOf("</title>", contents.indexOf("<title>")));
+                        } else if (contents.indexOf("<h1") >= 0) {
+                            // Attempt to take the bookName from the first H1 marker
+                            bookName = contents.substring(contents.indexOf("<h1>") + 7, contents.indexOf("</h1>", contents.indexOf("<h1>")));
+                        }
+                        if (bookName.length === 0) {
+                            // welp, we tried - fall back on the generic "Text-{guid}" clipboard name
+                            bookName = fileName;
+                        }
                     } else {
                         // not a clipboard snippet -- does it have a file extension?
                         if (fileName.indexOf(".") > -1) {
