@@ -5072,6 +5072,9 @@ define(function (require) {
                 var bCodeBlock = false;
                 var arrList = [];
                 var markerAry = [];
+                var colCount = 0;
+                var strTag = "";
+                var strAtts = "";
                 // get the chapters belonging to our book
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -5096,7 +5099,15 @@ define(function (require) {
                                     console.log("buildMarkdown - unfiltered markers: " + markerAry.length + " ("+ value.get("markers") + ")");
                                     while (j < markerAry.length) {
                                         if (markerAry[j].length > 0) {
-                                            switch (markerAry[j]) {
+                                            // extract any attributes from the marker tag
+                                            if (markerAry[j].indexOf("|") > -1) {
+                                                strTag = markerAry[j].substring(0, markerAry[j].indexOf("|"));
+                                                strAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1);
+                                            } else {
+                                                strTag = markerAry[j];
+                                                strAtts = "";
+                                            }
+                                            switch (strTag) {
                                                 // newline (only)
                                                 case "\\c":
                                                 case "\\v":
@@ -5176,6 +5187,15 @@ define(function (require) {
                                                     bCodeBlock = false;
                                                     strExportBuff += "\n";
                                                     break;
+                                                case "\\_ht_h1*":
+                                                case "\\_ht_h2*":
+                                                case "\\_ht_h3*":
+                                                case "\\_ht_h4*":
+                                                case "\\_ht_h5*":
+                                                case "\\_ht_h6*":
+                                                case "\\_ht_p*":
+                                                    // don't emit anything
+                                                    break;
                                                 case "\\mt1":
                                                     strExportBuff += "\n\n# "; // h1
                                                     break;
@@ -5235,14 +5255,45 @@ define(function (require) {
                                                     j = j + 5;
                                                     strExportBuff += strTemp;
                                                     break;
+
+                                                // Table stuff
+                                                case "\\_ht_table":
+                                                case "\\_ht_table*":
+                                                case "\\_ht_tbody*":
+                                                    strExportBuff += "\n";
+                                                    break;
+                                                case "\\_ht_tbody":
+                                                case "\\_ht_tr*":
+                                                case "\\_ht_td":
+                                                    // emit nothing
+                                                    break;
+                                                case "\\_ht_thead":
+                                                    colCount = 0; // reset the column count
+                                                    break;
+                                                case "\\_ht_th":
+                                                    colCount++;
+                                                    break;
+                                                case "\\_ht_thead*":
+                                                    // emit the delimiter row
+                                                    strExportBuff += "\n | ";
+                                                    for (var k = 0; k < colCount; k++) {
+                                                        strExportBuff += "--- | ";
+                                                    }
+                                                    break;
+                                                case "\\_ht_tr":
+                                                    strExportBuff += "\n | "; // next table row
+                                                    break;
+                                                case "\\_ht_th*":
+                                                case "\\_ht_td*":
+                                                    strExportBuff += " | ";
+                                                    break;
+
+                                                // everything else
                                                 default:
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
                                                         // some other closing html tag
                                                         strExportBuff = strExportBuff.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
-                                                        if (markerAry[j] === "\\_ht_table") {
-                                                            strExportBuff = strExportBuff.trim() + "\n";
-                                                        }
                                                         // some other opening html tag
                                                         strExportBuff += "<";
                                                         // are there any HTML attributes we need to parse?
