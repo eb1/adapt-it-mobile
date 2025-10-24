@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget android-versionCode="64" defaultlocale="en" id="org.adaptit.adaptitmobile" ios-CFBundleVersion="1" version="1.18.1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:gap="http://phonegap.com/ns/1.0">
+<widget android-versionCode="65" defaultlocale="en" id="org.adaptit.adaptitmobile" ios-CFBundleVersion="1" version="1.10.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:gap="http://phonegap.com/ns/1.0">
     <name short="Adapt It Mobile" xml:lang="en">Adapt It Mobile</name>
     <description xml:lang="en">
         An open source application for translating between related languages.
@@ -56,6 +56,9 @@
                 <data android:pathPattern=".*\\.sfm" />
                 <data android:pathPattern=".*\\.usx" />
                 <data android:pathPattern=".*\\.aic" />
+                <data android:pathPattern=".*\\.md" />
+                <data android:pathPattern=".*\\.htm" />
+                <data android:pathPattern=".*\\.html" />
                 <data android:pathPattern=".*\\..*\\.xml" />
                 <data android:pathPattern=".*\\..*\\.tmx" />
                 <data android:pathPattern=".*\\..*\\.txt" />
@@ -63,6 +66,9 @@
                 <data android:pathPattern=".*\\..*\\.sfm" />
                 <data android:pathPattern=".*\\..*\\.usx" />
                 <data android:pathPattern=".*\\..*\\.aic" />
+                <data android:pathPattern=".*\\..*\\.md" />
+                <data android:pathPattern=".*\\..*\\.htm" />
+                <data android:pathPattern=".*\\..*\\.html" />
                 <data android:pathPattern=".*\\..*\\..*\\.xml" />
                 <data android:pathPattern=".*\\..*\\..*\\.tmx" />
                 <data android:pathPattern=".*\\..*\\..*\\.txt" />
@@ -70,6 +76,9 @@
                 <data android:pathPattern=".*\\..*\\..*\\.sfm" />
                 <data android:pathPattern=".*\\..*\\..*\\.usx" />
                 <data android:pathPattern=".*\\..*\\..*\\.aic" />
+                <data android:pathPattern=".*\\..*\\..*\\.md" />
+                <data android:pathPattern=".*\\..*\\..*\\.htm" />
+                <data android:pathPattern=".*\\..*\\..*\\.html" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.xml" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.tmx" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.txt" />
@@ -77,6 +86,9 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.sfm" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.usx" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.aic" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.md" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.htm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.html" />
             </intent-filter>
         </config-file>
         <icon density="ldpi" src="www/res/icon/android/ldpi.png" />
@@ -135,6 +147,7 @@
             <array>
                 <string>UIInterfaceOrientationPortrait</string>
                 <string>UIInterfaceOrientationLandscapeLeft</string>
+                <string>UIInterfaceOrientationPortraitUpsideDown</string>
                 <string>UIInterfaceOrientationLandscapeRight</string>
             </array>
         </config-file>
@@ -167,6 +180,34 @@
                     <key>LSItemContentTypes</key>
                     <array>
                         <string>public.plain-text</string>
+                    </array>
+                </dict>
+                <dict>
+                    <key>CFBundleTypeIconFiles</key>
+                    <array />
+                    <key>CFBundleTypeName</key>
+                    <string>HTML Document</string>
+                    <key>CFBundleTypeRole</key>
+                    <string>Editor</string>
+                    <key>LSHandlerRank</key>
+                    <string>Default</string>
+                    <key>LSItemContentTypes</key>
+                    <array>
+                        <string>public.html</string>
+                    </array>
+                </dict>
+                <dict>
+                    <key>CFBundleTypeIconFiles</key>
+                    <array />
+                    <key>CFBundleTypeName</key>
+                    <string>Markdown Document</string>
+                    <key>CFBundleTypeRole</key>
+                    <string>Editor</string>
+                    <key>LSHandlerRank</key>
+                    <string>Default</string>
+                    <key>LSItemContentTypes</key>
+                    <array>
+                        <string>net.daringfireball.markdown</string>
                     </array>
                 </dict>
                 <dict>
@@ -254,6 +295,49 @@
         </config-file>
         <config-file mode="replace" parent="UTImportedTypeDeclarations" target="*-Info.plist">
             <array>
+                <dict>
+                    <key>UTTypeConformsTo</key>
+                    <array>
+                        <string>public.text</string>
+                    </array>
+                    <key>UTTypeDescription</key>
+                    <string>Markdown Document</string>
+                    <key>CFBundleTypeIconFiles</key>
+                    <array />
+                    <key>UTTypeIdentifier</key>
+                    <string>net.daringfireball.markdown</string>
+                    <key>UTTypeTagSpecification</key>
+                    <dict>
+                        <key>public.filename-extension</key>
+                        <array>
+                            <string>md</string>
+                        </array>
+                        <key>public.mime-type</key>
+                        <string>text/markdown</string>
+                    </dict>
+                </dict>
+                <dict>
+                    <key>UTTypeConformsTo</key>
+                    <array>
+                        <string>public.text</string>
+                    </array>
+                    <key>UTTypeDescription</key>
+                    <string>HTML Document</string>
+                    <key>CFBundleTypeIconFiles</key>
+                    <array />
+                    <key>UTTypeIdentifier</key>
+                    <string>net.daringfireball.markdown</string>
+                    <key>UTTypeTagSpecification</key>
+                    <dict>
+                        <key>public.html</key>
+                        <array>
+                            <string>html</string>
+                            <string>htm</string>
+                        </array>
+                        <key>public.mime-type</key>
+                        <string>text/html</string>
+                    </dict>
+                </dict>
                 <dict>
                     <key>UTTypeConformsTo</key>
                     <array>
