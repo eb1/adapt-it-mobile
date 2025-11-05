@@ -5071,9 +5071,11 @@ define(function (require) {
                 var bCodeBlock = false;
                 var arrList = [];
                 var markerAry = [];
-                var colCount = 0;
+                var arrCols = [];
+                var bTableHeader = false;
                 var strTag = "";
                 var strAtts = "";
+                var sfmTable = 0;
                 // get the chapters belonging to our book
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -5267,23 +5269,79 @@ define(function (require) {
                                                     // emit nothing
                                                     break;
                                                 case "\\_ht_thead":
-                                                    colCount = 0; // reset the column count
+                                                    arrCols.length = 0; // reset the column array
+                                                    break;
+                                                case "\\th1":
+                                                case "\\th2":
+                                                case "\\th3":
+                                                case "\\th4":
+                                                case "\\th5":
+                                                    bTableHeader = true;
+                                                    arrCols.push(0); // column with no alignment specified
                                                     break;
                                                 case "\\_ht_th":
-                                                    colCount++;
+                                                    arrCols.push(0); // column with no alignment specified
+                                                    break;
+                                                case "\\thr1":
+                                                case "\\thr2":
+                                                case "\\thr3":
+                                                case "\\thr4":
+                                                case "\\thr5":
+                                                    bTableHeader = true;
+                                                    arrCols.push(2); // colum with right alignment
                                                     break;
                                                 case "\\_ht_thead*":
                                                     // emit the delimiter row
                                                     strExportBuff += "\n | ";
-                                                    for (var k = 0; k < colCount; k++) {
-                                                        strExportBuff += "--- | ";
+                                                    for (var k = 0; k < arrCols.length; k++) {
+                                                        if (arrCols[k] === 0) {
+                                                            strExportBuff += "--- | "; // no alignment
+                                                        } else if (arrCols[k] === 1) {
+                                                            strExportBuff += ":--- | "; // left alignment
+                                                        } else if (arrCols[k] === 2) {
+                                                            strExportBuff += "---: | "; // right alignment
+                                                        } else if (arrCols[k] === 3) {
+                                                            strExportBuff += ":---: | "; // center alignment
+                                                        } 
                                                     }
+                                                    arrCols.length = 0; // reset the column array
                                                     break;
                                                 case "\\_ht_tr":
                                                     strExportBuff += "\n | "; // next table row
                                                     break;
+                                                case "\\tr":
+                                                    // could be the start of a table or a new row
+                                                    strExportBuff += "\n | "; // next table row
+                                                    // if we just finished the header columns, emit the delimiter row
+                                                    if (bTableHeader === true) {
+                                                        for (var k = 0; k < arrCols.length; k++) {
+                                                            if (arrCols[k] === 0) {
+                                                                strExportBuff += "--- | "; // no alignment
+                                                            } else if (arrCols[k] === 1) {
+                                                                strExportBuff += ":--- | "; // left alignment
+                                                            } else if (arrCols[k] === 2) {
+                                                                strExportBuff += "---: | "; // right alignment
+                                                            } else if (arrCols[k] === 3) {
+                                                                strExportBuff += ":---: | "; // center alignment
+                                                            } 
+                                                        }
+                                                        strExportBuff += "\n | "; // next table row
+                                                        arrCols.length = 0; // reset the column array
+                                                        bTableHeader = false;
+                                                    }
+                                                    break;
                                                 case "\\_ht_th*":
                                                 case "\\_ht_td*":
+                                                case "\\tc1":
+                                                case "\\tc2":
+                                                case "\\tc3":
+                                                case "\\tc4":
+                                                case "\\tc5":
+                                                case "\\tcr1": // note: ignoring right-alignment at cell level (header determines alignment for column in markdown)
+                                                case "\\tcr2":
+                                                case "\\tcr3":
+                                                case "\\tcr4":
+                                                case "\\tcr5":
                                                     strExportBuff += " | ";
                                                     break;
 
@@ -5292,6 +5350,17 @@ define(function (require) {
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
                                                         // some other closing html tag
                                                         strExportBuff = strExportBuff.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
+                                                    } else if (markerAry[j].indexOf("\\_ht_th|\"align\"") > -1) {
+                                                        // variation of \\th with alignment specified -- what's the alignment, kenneth?
+                                                        if (markerAry[j].indexOf("left") > -1) {
+                                                            arrCols.push(1);
+                                                        } else if (markerAry[j].indexOf("right") > -1) {
+                                                            arrCols.push(2);
+                                                        } else if (markerAry[j].indexOf("center") > -1) {
+                                                            arrCols.push(3);
+                                                        } else {
+                                                            arrCols.push(0); // fall back on no alignment
+                                                        }
                                                     } else if (markerAry[j].indexOf("\\_ht_") > -1) {
                                                         // some other opening html tag
                                                         strExportBuff += "<";
