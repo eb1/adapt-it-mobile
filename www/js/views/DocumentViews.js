@@ -5035,11 +5035,11 @@ define(function (require) {
                             } 
                         }
                     }
-                    if (bDirty === false) {
-                        // didn't export anything
-                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                        return false;                  
-                    }
+                    // if (bDirty === false) {
+                    //     // didn't export anything
+                    //     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                    //     return false;                  
+                    // }
                 });
                 if (strContents === "") {
                     // didn't export anything
@@ -5072,10 +5072,10 @@ define(function (require) {
                 var arrList = [];
                 var markerAry = [];
                 var arrCols = [];
+                var bInSFMTable = false;
                 var bTableHeader = false;
                 var strTag = "";
                 var strAtts = "";
-                var sfmTable = 0;
                 // get the chapters belonging to our book
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -5110,19 +5110,32 @@ define(function (require) {
                                             }
                                             switch (strTag) {
                                                 // newline (only)
-                                                case "\\c":
-                                                case "\\v":
                                                 case "\\h":
                                                 case "\\b":
+                                                case "\\c":
                                                     if (bCodeBlock === true) {
                                                         strExportBuff += "\n";
                                                     } else {
                                                         strExportBuff += "\n\n";
                                                     }
+                                                    // write the chapter # as a major heading
+                                                    if (strTag === "\\c") {
+                                                        j++;
+                                                        strExportBuff += "#" + markerAry[j] + "\n";
+                                                    }
+                                                    break;
+                                                case "\\v":
+                                                    // write the verse # as bold inline text
+                                                    j++;
+                                                    strExportBuff += " **" + markerAry[j] + "** ";
                                                     break;
                                                 case "\\p":
                                                     // if we're in a codeblock or a block quote, newline is just a newline;
                                                     // if not, separate the paragraphs by a blank line
+                                                    if (bInSFMTable === true) {
+                                                        strExportBuff += " |"; // close out the table
+                                                        bInSFMTable = false; // not in a SFM table unless we hit a \\tr next
+                                                    }
                                                     if (j > 0 && markerAry[j-1] === "\\_ht_li") {
                                                         // paragraph after a list item -- ignore
                                                         console.log("paragraph after a list item - ignoring");
@@ -5276,6 +5289,9 @@ define(function (require) {
                                                 case "\\th3":
                                                 case "\\th4":
                                                 case "\\th5":
+                                                    if (strTag !== "\\th1") { // first col already has a pipe
+                                                        strExportBuff += " | ";
+                                                    }
                                                     bTableHeader = true;
                                                     arrCols.push(0); // column with no alignment specified
                                                     break;
@@ -5287,6 +5303,9 @@ define(function (require) {
                                                 case "\\thr3":
                                                 case "\\thr4":
                                                 case "\\thr5":
+                                                    if (strTag !== "\\thr1") { // first col already has a pipe
+                                                        strExportBuff += " | ";
+                                                    }
                                                     bTableHeader = true;
                                                     arrCols.push(2); // colum with right alignment
                                                     break;
@@ -5311,6 +5330,11 @@ define(function (require) {
                                                     break;
                                                 case "\\tr":
                                                     // could be the start of a table or a new row
+                                                    if (bInSFMTable === true) {
+                                                        // continuation of a table, with no \\p to end the row
+                                                        strExportBuff += " | ";
+                                                    }
+                                                    bInSFMTable = true; // in a SFM table
                                                     strExportBuff += "\n | "; // next table row
                                                     // if we just finished the header columns, emit the delimiter row
                                                     if (bTableHeader === true) {
@@ -5332,13 +5356,11 @@ define(function (require) {
                                                     break;
                                                 case "\\_ht_th*":
                                                 case "\\_ht_td*":
-                                                case "\\tc1":
                                                 case "\\tc2":
                                                 case "\\tc3":
                                                 case "\\tc4":
                                                 case "\\tc5":
-                                                case "\\tcr1": // note: ignoring right-alignment at cell level (header determines alignment for column in markdown)
-                                                case "\\tcr2":
+                                                case "\\tcr2": // note: ignoring right-alignment at cell level (header determines alignment for column in markdown)
                                                 case "\\tcr3":
                                                 case "\\tcr4":
                                                 case "\\tcr5":
@@ -5441,20 +5463,24 @@ define(function (require) {
                         if (chaptersLeft === 0) {
                             console.log("finished in a blank block");
                             if (bDirty === false) {
+                                console.log ("blank block, bdirty=false, strContents: " + strContents);
                                 // didn't export anything
                                 exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
                                 return false;
                             } 
                         }
                     }
-                    if (bDirty === false) {
-                        // didn't export anything
-                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                        return false;                  
-                    }
+                    // if (bDirty === false) {
+                    //     console.log("generic bDirty === false");
+                    //     console.log ("strContents: " + strContents);
+                    //     // didn't export anything
+                    //     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                    //     return false;                  
+                    // }
                 });
                 if (strContents === "") {
                     // didn't export anything
+                    console.log ("strContents is empty; strExportBuff = " + strExportBuff);
                     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
                     return false;
                 } else {
@@ -5507,12 +5533,21 @@ define(function (require) {
                                     while (j < markerAry.length) {
                                         if (markerAry[j].length > 0) {
                                             switch (markerAry[j]) {
-                                                // newline (only)
+                                                // newline markers
                                                 case "\\c":
-                                                case "\\v":
                                                 case "\\h":
                                                 case "\\b":
                                                     strExportBuff += "<br>";
+                                                    // write the chapter # as a h2 heading
+                                                    if (strTag === "\\c") {
+                                                        j++;
+                                                        strExportBuff += "<h2>" + markerAry[j] + "</h2>\n";
+                                                    }
+                                                    break;
+                                                case "\\v":
+                                                    // write the verse # inline
+                                                    j++;
+                                                    strExportBuff += markerAry[j] + " ";
                                                     break;
                                                 case "\\p":
                                                     strExportBuff += "\n<p>";
@@ -5661,11 +5696,11 @@ define(function (require) {
                             } 
                         }
                     }
-                    if (bDirty === false) {
-                        // didn't export anything
-                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                        return false;                  
-                    }
+                    // if (bDirty === false) {
+                    //     // didn't export anything
+                    //     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
+                    //     return false;                  
+                    // }
                 });
                 strContents += HTML_POST;
                 if (strContents === "") {
