@@ -5035,11 +5035,6 @@ define(function (require) {
                             } 
                         }
                     }
-                    // if (bDirty === false) {
-                    //     // didn't export anything
-                    //     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                    //     return false;                  
-                    // }
                 });
                 if (strContents === "") {
                     // didn't export anything
@@ -5470,13 +5465,6 @@ define(function (require) {
                             } 
                         }
                     }
-                    // if (bDirty === false) {
-                    //     console.log("generic bDirty === false");
-                    //     console.log ("strContents: " + strContents);
-                    //     // didn't export anything
-                    //     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                    //     return false;                  
-                    // }
                 });
                 if (strContents === "") {
                     // didn't export anything
@@ -5696,11 +5684,6 @@ define(function (require) {
                             } 
                         }
                     }
-                    // if (bDirty === false) {
-                    //     // didn't export anything
-                    //     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                    //     return false;                  
-                    // }
                 });
                 strContents += HTML_POST;
                 if (strContents === "") {
@@ -5878,6 +5861,7 @@ define(function (require) {
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
                 var lastSPID = window.Application.currentBookmark.get('spid');
                 var bDirty = false;
+                var tmpMarkers = "";
                 console.log("buildUSFMGloss: entry");
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -5895,6 +5879,17 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
                                 if (filtered === false) {
                                     for (idxFilters = 0; idxFilters < filterAry.length; idxFilters++) {
@@ -6003,6 +5998,7 @@ define(function (require) {
                 var filtered = false;
                 var needsEndMarker = "";
                 var mkr = "";
+                var tmpMarkers = "";
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
                 var lastSPID = window.Application.currentBookmark.get('spid');
                 var bDirty = false;
@@ -6023,6 +6019,17 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
                                 if (filtered === false) {
                                     for (idxFilters = 0; idxFilters < filterAry.length; idxFilters++) {
@@ -6150,6 +6157,7 @@ define(function (require) {
                 var strMarker = "";
                 var strOptions = "";
                 var chaptersLeft = chapters.length;
+                var tmpMarkers = "";
                 // starting material -- xml prolog and usx tag
                 // using USX 3.0 (https://ubsicap.github.io/usx/v3.0.0/index.html)
                 strContents = XML_PROLOG + "\n<usx version=\"3.0\">";
@@ -6169,6 +6177,17 @@ define(function (require) {
                             for (spIdx = 0; spIdx < spList.length; spIdx++) {
                                 value = spList.at(spIdx);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
                                 if (markers.length > 0 && isBookBlock === true) {
                                     // Close out the <book> element -- and add an IDE block -- 
                                     // before processing the next marker
@@ -6779,10 +6798,7 @@ define(function (require) {
                 var lastTY = "2";
                 var value = null;
                 var mkr = null;
-                var atts = {
-                    name: [],
-                    value: []
-                };
+                var tmpMarkers = "";
                 var project = window.Application.currentProject;
                 var chaptersLeft = chapters.length;
                 var hexToWXColor = function (color) {
@@ -6896,6 +6912,17 @@ define(function (require) {
                         for (i = 0; i < spList.length; i++) {
                             value = spList.at(i);
                             markers = value.get("markers");
+                            // remove any _ht_ markers
+                            if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                tmpMarkers = "";
+                                // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                markers.split(" ").forEach(function (marker) {
+                                    if (marker.indexOf("_ht_") === -1) {
+                                        tmpMarkers += marker + " ";
+                                    }
+                                });
+                                markers = tmpMarkers.trim();
+                            }
                             // before we begin -- do some checks for filtered sourcephrases
                             // With the XML export, filtered text is exported in the "fi" attribute. We'll collect all the filtered
                             // text and markers in that attribute, and then export the attribute with the first non-filtered string.
