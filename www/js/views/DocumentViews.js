@@ -2931,9 +2931,19 @@ define(function (require) {
                     var bCodeBlock = false;
                     var verseID = window.Application.generateUUID(); // pre-verse 1 initialization
                     console.log("Reading HTML file:" + fileName);
+                    // set the bookName
                     if (fileName.indexOf(i18n.t("view.lblText") + "-") > -1) {
-                        // "Text-{guid}" clipboard snippet name
-                        bookName = fileName;
+                        // clipboard snippet -- try to find the <title> tag
+                        if (contents.indexOf("<title") >= 0) {
+                            bookName = contents.substring(contents.indexOf("<title>") + 7, contents.indexOf("</title>", contents.indexOf("<title>")));
+                        } else if (contents.indexOf("<h1") >= 0) {
+                            // Attempt to take the bookName from the first H1 marker
+                            bookName = contents.substring(contents.indexOf("<h1>") + 7, contents.indexOf("</h1>", contents.indexOf("<h1>")));
+                        }
+                        if (bookName.length === 0) {
+                            // welp, we tried - fall back on the generic "Text-{guid}" clipboard name
+                            bookName = fileName;
+                        }
                     } else {
                         // not a clipboard snippet -- does it have a file extension?
                         if (fileName.indexOf(".") > -1) {
@@ -3255,7 +3265,6 @@ define(function (require) {
                                     if (arr[i] === "<p>") {
                                         // newline -- make a note and keep going
                                         markers += "\\b ";
-                                        arrClosing.push("*"); // no closing tag
                                         i++;
                                     } else {
                                         spID = window.Application.generateUUID();
@@ -5026,11 +5035,6 @@ define(function (require) {
                             } 
                         }
                     }
-                    if (bDirty === false) {
-                        // didn't export anything
-                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                        return false;                  
-                    }
                 });
                 if (strContents === "") {
                     // didn't export anything
@@ -5062,6 +5066,11 @@ define(function (require) {
                 var bCodeBlock = false;
                 var arrList = [];
                 var markerAry = [];
+                var arrCols = [];
+                var bInSFMTable = false;
+                var bTableHeader = false;
+                var strTag = "";
+                var strAtts = "";
                 // get the chapters belonging to our book
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -5086,21 +5095,42 @@ define(function (require) {
                                     console.log("buildMarkdown - unfiltered markers: " + markerAry.length + " ("+ value.get("markers") + ")");
                                     while (j < markerAry.length) {
                                         if (markerAry[j].length > 0) {
-                                            switch (markerAry[j]) {
+                                            // extract any attributes from the marker tag
+                                            if (markerAry[j].indexOf("|") > -1) {
+                                                strTag = markerAry[j].substring(0, markerAry[j].indexOf("|"));
+                                                strAtts = markerAry[j].substring(markerAry[j].indexOf("|") + 1);
+                                            } else {
+                                                strTag = markerAry[j];
+                                                strAtts = "";
+                                            }
+                                            switch (strTag) {
                                                 // newline (only)
-                                                case "\\c":
-                                                case "\\v":
                                                 case "\\h":
                                                 case "\\b":
+                                                case "\\c":
                                                     if (bCodeBlock === true) {
                                                         strExportBuff += "\n";
                                                     } else {
                                                         strExportBuff += "\n\n";
                                                     }
+                                                    // write the chapter # as a major heading
+                                                    if (strTag === "\\c") {
+                                                        j++;
+                                                        strExportBuff += "#" + markerAry[j] + "\n";
+                                                    }
+                                                    break;
+                                                case "\\v":
+                                                    // write the verse # as bold inline text
+                                                    j++;
+                                                    strExportBuff += " **" + markerAry[j] + "** ";
                                                     break;
                                                 case "\\p":
                                                     // if we're in a codeblock or a block quote, newline is just a newline;
                                                     // if not, separate the paragraphs by a blank line
+                                                    if (bInSFMTable === true) {
+                                                        strExportBuff += " |"; // close out the table
+                                                        bInSFMTable = false; // not in a SFM table unless we hit a \\tr next
+                                                    }
                                                     if (j > 0 && markerAry[j-1] === "\\_ht_li") {
                                                         // paragraph after a list item -- ignore
                                                         console.log("paragraph after a list item - ignoring");
@@ -5166,6 +5196,15 @@ define(function (require) {
                                                     bCodeBlock = false;
                                                     strExportBuff += "\n";
                                                     break;
+                                                case "\\_ht_h1*":
+                                                case "\\_ht_h2*":
+                                                case "\\_ht_h3*":
+                                                case "\\_ht_h4*":
+                                                case "\\_ht_h5*":
+                                                case "\\_ht_h6*":
+                                                case "\\_ht_p*":
+                                                    // don't emit anything
+                                                    break;
                                                 case "\\mt1":
                                                     strExportBuff += "\n\n# "; // h1
                                                     break;
@@ -5225,14 +5264,121 @@ define(function (require) {
                                                     j = j + 5;
                                                     strExportBuff += strTemp;
                                                     break;
+
+                                                // Table stuff
+                                                case "\\_ht_table":
+                                                case "\\_ht_table*":
+                                                case "\\_ht_tbody*":
+                                                    strExportBuff += "\n";
+                                                    break;
+                                                case "\\_ht_tbody":
+                                                case "\\_ht_tr*":
+                                                case "\\_ht_td":
+                                                    // emit nothing
+                                                    break;
+                                                case "\\_ht_thead":
+                                                    arrCols.length = 0; // reset the column array
+                                                    break;
+                                                case "\\th1":
+                                                case "\\th2":
+                                                case "\\th3":
+                                                case "\\th4":
+                                                case "\\th5":
+                                                    if (strTag !== "\\th1") { // first col already has a pipe
+                                                        strExportBuff += " | ";
+                                                    }
+                                                    bTableHeader = true;
+                                                    arrCols.push(0); // column with no alignment specified
+                                                    break;
+                                                case "\\_ht_th":
+                                                    arrCols.push(0); // column with no alignment specified
+                                                    break;
+                                                case "\\thr1":
+                                                case "\\thr2":
+                                                case "\\thr3":
+                                                case "\\thr4":
+                                                case "\\thr5":
+                                                    if (strTag !== "\\thr1") { // first col already has a pipe
+                                                        strExportBuff += " | ";
+                                                    }
+                                                    bTableHeader = true;
+                                                    arrCols.push(2); // colum with right alignment
+                                                    break;
+                                                case "\\_ht_thead*":
+                                                    // emit the delimiter row
+                                                    strExportBuff += "\n | ";
+                                                    for (var k = 0; k < arrCols.length; k++) {
+                                                        if (arrCols[k] === 0) {
+                                                            strExportBuff += "--- | "; // no alignment
+                                                        } else if (arrCols[k] === 1) {
+                                                            strExportBuff += ":--- | "; // left alignment
+                                                        } else if (arrCols[k] === 2) {
+                                                            strExportBuff += "---: | "; // right alignment
+                                                        } else if (arrCols[k] === 3) {
+                                                            strExportBuff += ":---: | "; // center alignment
+                                                        } 
+                                                    }
+                                                    arrCols.length = 0; // reset the column array
+                                                    break;
+                                                case "\\_ht_tr":
+                                                    strExportBuff += "\n | "; // next table row
+                                                    break;
+                                                case "\\tr":
+                                                    // could be the start of a table or a new row
+                                                    if (bInSFMTable === true) {
+                                                        // continuation of a table, with no \\p to end the row
+                                                        strExportBuff += " | ";
+                                                    }
+                                                    bInSFMTable = true; // in a SFM table
+                                                    strExportBuff += "\n | "; // next table row
+                                                    // if we just finished the header columns, emit the delimiter row
+                                                    if (bTableHeader === true) {
+                                                        for (var k = 0; k < arrCols.length; k++) {
+                                                            if (arrCols[k] === 0) {
+                                                                strExportBuff += "--- | "; // no alignment
+                                                            } else if (arrCols[k] === 1) {
+                                                                strExportBuff += ":--- | "; // left alignment
+                                                            } else if (arrCols[k] === 2) {
+                                                                strExportBuff += "---: | "; // right alignment
+                                                            } else if (arrCols[k] === 3) {
+                                                                strExportBuff += ":---: | "; // center alignment
+                                                            } 
+                                                        }
+                                                        strExportBuff += "\n | "; // next table row
+                                                        arrCols.length = 0; // reset the column array
+                                                        bTableHeader = false;
+                                                    }
+                                                    break;
+                                                case "\\_ht_th*":
+                                                case "\\_ht_td*":
+                                                case "\\tc2":
+                                                case "\\tc3":
+                                                case "\\tc4":
+                                                case "\\tc5":
+                                                case "\\tcr2": // note: ignoring right-alignment at cell level (header determines alignment for column in markdown)
+                                                case "\\tcr3":
+                                                case "\\tcr4":
+                                                case "\\tcr5":
+                                                    strExportBuff += " | ";
+                                                    break;
+
+                                                // everything else
                                                 default:
                                                     if (markerAry[j].indexOf("\\_ht_") > -1 && markerAry[j].indexOf("*") > -1) {
                                                         // some other closing html tag
                                                         strExportBuff = strExportBuff.trim() + "</" + markerAry[j].substring(5, markerAry[j].length - 1) + ">";
-                                                    } else if (markerAry[j].indexOf("\\_ht_") > -1) {
-                                                        if (markerAry[j] === "\\_ht_table") {
-                                                            strExportBuff = strExportBuff.trim() + "\n";
+                                                    } else if (markerAry[j].indexOf("\\_ht_th|\"align\"") > -1) {
+                                                        // variation of \\th with alignment specified -- what's the alignment, kenneth?
+                                                        if (markerAry[j].indexOf("left") > -1) {
+                                                            arrCols.push(1);
+                                                        } else if (markerAry[j].indexOf("right") > -1) {
+                                                            arrCols.push(2);
+                                                        } else if (markerAry[j].indexOf("center") > -1) {
+                                                            arrCols.push(3);
+                                                        } else {
+                                                            arrCols.push(0); // fall back on no alignment
                                                         }
+                                                    } else if (markerAry[j].indexOf("\\_ht_") > -1) {
                                                         // some other opening html tag
                                                         strExportBuff += "<";
                                                         // are there any HTML attributes we need to parse?
@@ -5312,20 +5458,17 @@ define(function (require) {
                         if (chaptersLeft === 0) {
                             console.log("finished in a blank block");
                             if (bDirty === false) {
+                                console.log ("blank block, bdirty=false, strContents: " + strContents);
                                 // didn't export anything
                                 exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
                                 return false;
                             } 
                         }
                     }
-                    if (bDirty === false) {
-                        // didn't export anything
-                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                        return false;                  
-                    }
                 });
                 if (strContents === "") {
                     // didn't export anything
+                    console.log ("strContents is empty; strExportBuff = " + strExportBuff);
                     exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
                     return false;
                 } else {
@@ -5378,12 +5521,21 @@ define(function (require) {
                                     while (j < markerAry.length) {
                                         if (markerAry[j].length > 0) {
                                             switch (markerAry[j]) {
-                                                // newline (only)
+                                                // newline markers
                                                 case "\\c":
-                                                case "\\v":
                                                 case "\\h":
                                                 case "\\b":
                                                     strExportBuff += "<br>";
+                                                    // write the chapter # as a h2 heading
+                                                    if (strTag === "\\c") {
+                                                        j++;
+                                                        strExportBuff += "<h2>" + markerAry[j] + "</h2>\n";
+                                                    }
+                                                    break;
+                                                case "\\v":
+                                                    // write the verse # inline
+                                                    j++;
+                                                    strExportBuff += markerAry[j] + " ";
                                                     break;
                                                 case "\\p":
                                                     strExportBuff += "\n<p>";
@@ -5531,11 +5683,6 @@ define(function (require) {
                                 return false;
                             } 
                         }
-                    }
-                    if (bDirty === false) {
-                        // didn't export anything
-                        exportFail(new Error(i18n.t('view.dscErrNothingToExport')));
-                        return false;                  
                     }
                 });
                 strContents += HTML_POST;
@@ -5714,6 +5861,7 @@ define(function (require) {
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
                 var lastSPID = window.Application.currentBookmark.get('spid');
                 var bDirty = false;
+                var tmpMarkers = "";
                 console.log("buildUSFMGloss: entry");
                 markerList.fetch({reset: true, data: {name: ""}});
                 console.log("markerList count: " + markerList.length);
@@ -5731,6 +5879,17 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
                                 if (filtered === false) {
                                     for (idxFilters = 0; idxFilters < filterAry.length; idxFilters++) {
@@ -5839,6 +5998,7 @@ define(function (require) {
                 var filtered = false;
                 var needsEndMarker = "";
                 var mkr = "";
+                var tmpMarkers = "";
                 var filterAry = window.Application.currentProject.get('FilterMarkers').split("\\");
                 var lastSPID = window.Application.currentBookmark.get('spid');
                 var bDirty = false;
@@ -5859,6 +6019,17 @@ define(function (require) {
                             for (i = 0; i < spList.length; i++) {
                                 value = spList.at(i);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
                                 // check to see if this sourcephrase is filtered (only looking at the top level)
                                 if (filtered === false) {
                                     for (idxFilters = 0; idxFilters < filterAry.length; idxFilters++) {
@@ -5986,6 +6157,7 @@ define(function (require) {
                 var strMarker = "";
                 var strOptions = "";
                 var chaptersLeft = chapters.length;
+                var tmpMarkers = "";
                 // starting material -- xml prolog and usx tag
                 // using USX 3.0 (https://ubsicap.github.io/usx/v3.0.0/index.html)
                 strContents = XML_PROLOG + "\n<usx version=\"3.0\">";
@@ -6005,6 +6177,17 @@ define(function (require) {
                             for (spIdx = 0; spIdx < spList.length; spIdx++) {
                                 value = spList.at(spIdx);
                                 markers = value.get("markers");
+                                // remove any _ht_ markers
+                                if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                    tmpMarkers = "";
+                                    // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                    markers.split(" ").forEach(function (marker) {
+                                        if (marker.indexOf("_ht_") === -1) {
+                                            tmpMarkers += marker + " ";
+                                        }
+                                    });
+                                    markers = tmpMarkers.trim();
+                                }
                                 if (markers.length > 0 && isBookBlock === true) {
                                     // Close out the <book> element -- and add an IDE block -- 
                                     // before processing the next marker
@@ -6615,10 +6798,7 @@ define(function (require) {
                 var lastTY = "2";
                 var value = null;
                 var mkr = null;
-                var atts = {
-                    name: [],
-                    value: []
-                };
+                var tmpMarkers = "";
                 var project = window.Application.currentProject;
                 var chaptersLeft = chapters.length;
                 var hexToWXColor = function (color) {
@@ -6732,6 +6912,17 @@ define(function (require) {
                         for (i = 0; i < spList.length; i++) {
                             value = spList.at(i);
                             markers = value.get("markers");
+                            // remove any _ht_ markers
+                            if ((markers !== "") && (markers.indexOf("_ht_") > -1)) {
+                                tmpMarkers = "";
+                                // this came from a Markdown or HTML import -- remove any _ht_ markers
+                                markers.split(" ").forEach(function (marker) {
+                                    if (marker.indexOf("_ht_") === -1) {
+                                        tmpMarkers += marker + " ";
+                                    }
+                                });
+                                markers = tmpMarkers.trim();
+                            }
                             // before we begin -- do some checks for filtered sourcephrases
                             // With the XML export, filtered text is exported in the "fi" attribute. We'll collect all the filtered
                             // text and markers in that attribute, and then export the attribute with the first non-filtered string.
