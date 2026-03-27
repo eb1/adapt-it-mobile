@@ -36,11 +36,12 @@ define(function (require) {
             },
 
             fetch: function () {
+                var obj = this; // model instance
                 var attributes = this.attributes;
                 window.Application.db.transaction(function (tx) {
                     tx.executeSql("SELECT * from targetunit WHERE tuid=?;", [attributes.tuid], function (tx, res) {
                         console.log("SELECT ok: " + res.rows);
-                        this.set(res.rows.item(0));
+                        obj.set(res.rows.item(0));
                     });
                 }, function (tx, err) {
                     console.log("SELECT error: " + err.message);
