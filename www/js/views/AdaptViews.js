@@ -408,7 +408,7 @@ define(function (require) {
                 }
                 // cache "stopAtBoundaries" value for performance
                 if ((!localStorage.getItem("StopAtBoundaries")) || (localStorage.getItem("StopAtBoundaries") === "true")) {
-                    stopAtBoundaries = true;
+                    this.stopAtBoundaries = true;
                 }                
                 // clean up -- if we have a searchList on the application, but this chapter isn't in that searchList,
                 // clear out the list
@@ -489,7 +489,7 @@ define(function (require) {
                                 idxEnd = idxStart;
                                 scrollToView(selectedStart);
                                 // select it
-                                $(selectedStart).mouseup();
+                                $(selectedStart).trigger("mouseup");
                             } else {
                                 // for some reason the last adapted SPID has gotten out of sync  --
                                 // select the first block instead
@@ -499,7 +499,7 @@ define(function (require) {
                                 idxEnd = idxStart;
                                 if (selectedStart !== null) {
                                     scrollToView(selectedStart);
-                                    $(selectedStart).mouseup();
+                                    $(selectedStart).trigger("mouseup");
                                 }
                             }
                         } else {
@@ -511,7 +511,7 @@ define(function (require) {
                             idxEnd = idxStart;
                             if (selectedStart !== null) {
                                 scrollToView(selectedStart);
-                                $(selectedStart).mouseup();
+                                $(selectedStart).trigger("mouseup");
                             }
                         }
                     }
@@ -765,7 +765,7 @@ define(function (require) {
                             // exit -- we hit some target text in our processing
                             break;
                         }
-                        if ((stopAtBoundaries === true) && ($(nextObj).children(".source").first().hasClass("fp"))) {
+                        if ((this.stopAtBoundaries === true) && ($(nextObj).children(".source").first().hasClass("fp"))) {
                             done = true; // current node is a boundary AND we want to stop there; we're done after this iteration
                         }                        
                         tmpStr = sourceText + ONE_SPACE + $(nextObj).children(".source").html();
@@ -1216,7 +1216,7 @@ define(function (require) {
                         $("#content").scrollTop(top);
                         lastOffset = top;
                         // now select it
-                        $(selectedStart).mouseup();
+                        $(selectedStart).trigger("mouseup");
                     } else {
                         // select the LAST pile
                         selectedStart = $(".pile").last().get(0);
@@ -1231,7 +1231,7 @@ define(function (require) {
                         $("#content").scrollTop(top);
                         lastOffset = top;
                         // now select it
-                        $(selectedStart).mouseup();
+                        $(selectedStart).trigger("mouseup");
                     }
                     // no next edit (reached the first or last pile) --
                 }
@@ -1309,10 +1309,12 @@ define(function (require) {
                     isLongPressSelection = true;
                     if (LongPressSectionStart === null) {
                         // start event
+                        console.log("long press activated: " + event.currentTarget.id);
                         LongPressSectionStart = event.currentTarget;
                     } else if (LongPressSectionStart === event.currentTarget) {
                         // user long-pressed in the same location -- consider this a toggle
                         // (i.e., clear out the long press value)
+                        console.log("nope - long press deactivated");
                         LongPressSectionStart = null;
                         isLongPressSelection = false;
                         $("div").removeClass("ui-longSelecting");
@@ -1418,7 +1420,7 @@ define(function (require) {
                         console.log("selectingPilesMove: go forward");
                         tmpNode = selectedEnd = selectedStart; // start at selectedStart
                         $(selectedEnd).addClass("ui-selecting");
-                        if ((stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
+                        if ((this.stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
                             done = true; // edge case -- current node is a boundary
                         }
                         while (!done) {
@@ -1438,7 +1440,7 @@ define(function (require) {
                                     }
                                 }                
                                 // if we're stopping at boundaries, we have one more check... punctuation
-                                if (stopAtBoundaries === true) {
+                                if (this.stopAtBoundaries === true) {
                                     // check punctuation (go from the inside out)
                                     if ($(tmpNode).children(".source").first().hasClass("pp")) {
                                         // comes before -- don't include
@@ -1497,7 +1499,7 @@ define(function (require) {
                                     }
                                 }                
                                 // if we're stopping at boundaries, we have one more check... punctuation
-                                if (stopAtBoundaries === true) {
+                                if (this.stopAtBoundaries === true) {
                                     // check punctuation (go from the inside out)
                                     if ($(tmpNode).children(".source").first().hasClass("fp")) {
                                         // comes after -- don't include
@@ -1564,7 +1566,7 @@ define(function (require) {
                             }
                         }
                         // if we're stopping at boundaries, we have one more check... punctuation
-                        if (stopAtBoundaries === true) {
+                        if (this.stopAtBoundaries === true) {
                             // check punctuation (go from the inside out)
                             if ($(tmpNode).children(".source").first().hasClass("fp")) {
                                 // comes after -- don't include
@@ -1587,7 +1589,7 @@ define(function (require) {
                 }
                 // now go forward
                 done = false;
-                if ((stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
+                if ((this.stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
                     done = true; // edge case -- current node is a boundary
                 }
                 while (!done) {
@@ -1605,7 +1607,7 @@ define(function (require) {
                             }
                         }
                         // if we're stopping at boundaries, we have one more check... punctuation
-                        if (stopAtBoundaries === true) {
+                        if (this.stopAtBoundaries === true) {
                             // check punctuation (go from the inside out)
                             if ($(tmpNode).children(".source").first().hasClass("pp")) {
                                 // comes before -- don't include
@@ -1762,7 +1764,7 @@ define(function (require) {
                                     }
                                 }
                                 // if we're stopping at boundaries, we have one more check... punctuation
-                                if (stopAtBoundaries === true) {
+                                if (this.stopAtBoundaries === true) {
                                     // check punctuation (go from the inside out)
                                     if ($(tmpNode).children(".source").first().hasClass("fp")) {
                                         // comes after -- don't include
@@ -1785,7 +1787,7 @@ define(function (require) {
                         }
                         // now go forward
                         done = false;
-                        if ((stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
+                        if ((this.stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
                             done = true; // edge case -- current node is a boundary
                         }
                         while (!done) {
@@ -1802,7 +1804,7 @@ define(function (require) {
                                     }
                                 }
                                 // if we're stopping at boundaries, we have one more check... punctuation
-                                if (stopAtBoundaries === true) {
+                                if (this.stopAtBoundaries === true) {
                                     // check punctuation (go from the inside out)
                                     if ($(tmpNode).children(".source").first().hasClass("pp")) {
                                         // comes before -- don't include
@@ -1830,126 +1832,129 @@ define(function (require) {
                     lastTapTime = now; // update the last tap time
                 }
                 // check for long press selection
-                if (isLongPressSelection === true && LongPressSectionStart !== selectedStart) {
-                    // This is the click _after_ the long press event, which indicates the selection end
-                    // modify the ending tap as appropriate
-                    if ($(LongPressSectionStart).index() < $(selectedStart).index()) {
-                        // go forward
-                        tmpNode = selectedEnd = LongPressSectionStart; // start at LongPressSectionStart
-                        if ((stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
-                            done = true; // edge case -- current node is a boundary
-                        }
-                        while (!done) {
-                            tmpNode = selectedEnd.nextElementSibling;
-                            if ($(tmpNode).index() === $(selectedStart).index()) {
-                                done = true; // reached the end -- fall through and possibly update selectedEnd, then exit the loop
+                if (isLongPressSelection === true) {
+                    console.log("selectingPilesEnd: long press selection. LongPressSectionStart: " + LongPressSectionStart.id + ", selectedStart: " + selectedStart.id);
+                    if (LongPressSectionStart !== selectedStart) {
+                        // This is the click _after_ the long press event, which indicates the selection end
+                        // modify the ending tap as appropriate
+                        if ($(LongPressSectionStart).index() < $(selectedStart).index()) {
+                            // go forward
+                            console.log("forward long press");
+                            tmpNode = selectedEnd = LongPressSectionStart; // start at LongPressSectionStart
+                            if ((this.stopAtBoundaries === true) && ($(selectedEnd).children(".source").first().hasClass("fp"))) {
+                                done = true; // edge case -- current node is a boundary
                             }
-                            if (tmpNode && ($(tmpNode).hasClass("pile")) && ($(tmpNode).hasClass("filter") === false) &&
-                                    ($(tmpNode).hasClass("moreFilter") === false)) {
-                                if (editorMode === editorModeEnum.FREE_TRANSLATING) {
-                                    // first, check for a FT
-                                    ft = $(tmpNode).find(".ft").html();
-                                    if (ft.length > 0) {
-                                        // do not include this SP
-                                        done = true;
-                                        break;
-                                    }
-                                }                
-                                // if we're stopping at boundaries, we have one more check... punctuation
-                                if (stopAtBoundaries === true) {
-                                    // check punctuation (go from the inside out)
-                                    if ($(tmpNode).children(".source").first().hasClass("pp")) {
-                                        // comes before -- don't include
-                                        done = true;
-                                    } else if ($(tmpNode).children(".source").first().hasClass("fp")) {
-                                        // comes after -- include
-                                        selectedEnd = tmpNode;
-                                        done = true;
+                            while (!done) {
+                                tmpNode = selectedEnd.nextElementSibling;
+                                if ($(tmpNode).index() === $(selectedStart).index()) {
+                                    done = true; // reached the end -- fall through and possibly update selectedEnd, then exit the loop
+                                }
+                                if (tmpNode && ($(tmpNode).hasClass("pile")) && ($(tmpNode).hasClass("filter") === false) &&
+                                        ($(tmpNode).hasClass("moreFilter") === false)) {
+                                    if (editorMode === editorModeEnum.FREE_TRANSLATING) {
+                                        // first, check for a FT
+                                        ft = $(tmpNode).find(".ft").html();
+                                        if (ft.length > 0) {
+                                            // do not include this SP
+                                            done = true;
+                                            break;
+                                        }
+                                    }                
+                                    // if we're stopping at boundaries, we have one more check... punctuation
+                                    if (this.stopAtBoundaries === true) {
+                                        // check punctuation (go from the inside out)
+                                        if ($(tmpNode).children(".source").first().hasClass("pp")) {
+                                            // comes before -- don't include
+                                            done = true;
+                                        } else if ($(tmpNode).children(".source").first().hasClass("fp")) {
+                                            // comes after -- include
+                                            selectedEnd = tmpNode;
+                                            done = true;
+                                        } else {
+                                            // no punctuation
+                                            selectedEnd = tmpNode;
+                                        }
                                     } else {
-                                        // no punctuation
+                                        // don't care about boundaries -- update selectedEnd
                                         selectedEnd = tmpNode;
                                     }
                                 } else {
-                                    // don't care about boundaries -- update selectedEnd
-                                    selectedEnd = tmpNode;
+                                    done = true; // exit    
                                 }
-                            } else {
-                                done = true; // exit    
                             }
+                            // set selectedStart (selectedEnd is already set)
+                            selectedStart = LongPressSectionStart;
+                        } else {
+                            console.log("backwards long press");
+                            // go backwards
+                            tmpNode = selectedEnd = LongPressSectionStart; // start at LongPressSectionStart
+                            if (editorMode === editorModeEnum.FREE_TRANSLATING) {
+                                // first, check for a FT at the selectedStart
+                                ft = $(tmpNode).find(".ft").html();
+                                if (ft.length > 0) {
+                                    // include this SP and stop
+                                    selectedStart = tmpNode;
+                                    done = true;
+                                }
+                            }
+                            while (!done) {
+                                tmpNode = selectedEnd.previousElementSibling;
+                                if ($(tmpNode).index() === $(selectedStart).index()) {
+                                    done = true; // reached the end -- fall through and possibly update selectedEnd, then exit the loop
+                                }
+                                if (tmpNode && ($(tmpNode).hasClass("pile")) && ($(tmpNode).hasClass("filter") === false) &&
+                                        ($(tmpNode).hasClass("moreFilter") === false)) {
+                                    if (editorMode === editorModeEnum.FREE_TRANSLATING) {
+                                        // first, check for a FT at the selectedStart
+                                        ft = $(tmpNode).find(".ft").html();
+                                        if (ft.length > 0) {
+                                            // include this SP and stop
+                                            selectedEnd = tmpNode;
+                                            done = true;
+                                        }
+                                    }                
+                                    // if we're stopping at boundaries, we have one more check... punctuation
+                                    if (this.stopAtBoundaries === true) {
+                                        // check punctuation (go from the inside out)
+                                        if ($(tmpNode).children(".source").first().hasClass("fp")) {
+                                            // comes after -- don't include
+                                            done = true;
+                                        } else if ($(tmpNode).children(".source").first().hasClass("pp")) {
+                                            // comes after -- include
+                                            selectedEnd = tmpNode;
+                                            done = true;
+                                        } else {
+                                            // no punctuation
+                                            selectedEnd = tmpNode;
+                                        }
+                                    } else {
+                                        // don't care about boundaries -- update selectedStart
+                                        selectedEnd = tmpNode;
+                                    }
+                                } else {
+                                    done = true; // exit    
+                                }
+                            }
+                            // now set selectedStart / selectedEnd
+                            selectedStart = selectedEnd; // swap vars
+                            selectedEnd = LongPressSectionStart;
                         }
-                        // set selectedStart (selectedEnd is already set)
-                        selectedStart = LongPressSectionStart;
+                        // done adjusting selectedStart / selectedEnd --
+                        // set the index values, etc.
+                        idxStart = $(selectedStart).index();
+                        idxEnd = $(selectedEnd).index();
+                        isSelecting = true; // change the UI color                        
                     } else {
-                        // go backwards
-                        tmpNode = selectedEnd = LongPressSectionStart; // start at LongPressSectionStart
-                        if (editorMode === editorModeEnum.FREE_TRANSLATING) {
-                            // first, check for a FT at the selectedStart
-                            ft = $(tmpNode).find(".ft").html();
-                            if (ft.length > 0) {
-                                // include this SP and stop
-                                selectedStart = tmpNode;
-                                done = true;
-                            }
-                        }
-                        while (!done) {
-                            tmpNode = selectedEnd.previousElementSibling;
-                            if ($(tmpNode).index() === $(selectedStart).index()) {
-                                done = true; // reached the end -- fall through and possibly update selectedEnd, then exit the loop
-                            }
-                            if (tmpNode && ($(tmpNode).hasClass("pile")) && ($(tmpNode).hasClass("filter") === false) &&
-                                    ($(tmpNode).hasClass("moreFilter") === false)) {
-                                if (editorMode === editorModeEnum.FREE_TRANSLATING) {
-                                    // first, check for a FT at the selectedStart
-                                    ft = $(tmpNode).find(".ft").html();
-                                    if (ft.length > 0) {
-                                        // include this SP and stop
-                                        selectedEnd = tmpNode;
-                                        done = true;
-                                    }
-                                }                
-                                // if we're stopping at boundaries, we have one more check... punctuation
-                                if (stopAtBoundaries === true) {
-                                    // check punctuation (go from the inside out)
-                                    if ($(tmpNode).children(".source").first().hasClass("fp")) {
-                                        // comes after -- don't include
-                                        done = true;
-                                    } else if ($(tmpNode).children(".source").first().hasClass("pp")) {
-                                        // comes after -- include
-                                        selectedEnd = tmpNode;
-                                        done = true;
-                                    } else {
-                                        // no punctuation
-                                        selectedEnd = tmpNode;
-                                    }
-                                } else {
-                                    // don't care about boundaries -- update selectedStart
-                                    selectedEnd = tmpNode;
-                                }
-                            } else {
-                                done = true; // exit    
-                            }
-                        }
-                        // now set selectedStart / selectedEnd
-                        selectedStart = selectedEnd; // swap vars
-                        selectedEnd = LongPressSectionStart;
+                        // console.log("selectedstart == LongPressSectionStart - start of long press");
+                        return;
                     }
-                    // done adjusting selectedStart / selectedEnd --
-                    // set the index values, etc.
-                    idxStart = $(selectedStart).index();
-                    idxEnd = $(selectedEnd).index();
-                    isSelecting = true; // change the UI color
-                    // done with long press selection -- clear out values and styling
-                    LongPressSectionStart = null; // clear out the long press value
-                    isLongPressSelection = false;
-                    $("div").removeClass("ui-longSelecting");
-                }
-                
-                // case where user started with a long press, then dragged the rest of the way
-                if (selectedEnd !== selectedStart && isLongPressSelection === true) {
-                    // done with long press selection -- clear out values and styling
-                    LongPressSectionStart = null; // clear out the long press value
-                    isLongPressSelection = false;
-                    $("div").removeClass("ui-longSelecting");
+                    if ((idxStart !== idxEnd) && (selectedStart !== LongPressSectionStart)) {
+                        // done with long press selection -- clear out values and styling
+                        // console.log("done with long press selection - clearing out");
+                        LongPressSectionStart = null; // clear out the long press value
+                        isLongPressSelection = false;
+                        $("div").removeClass("ui-longSelecting");
+                    }
                 }
                 
                 if (isSelecting === true) {
@@ -2098,7 +2103,7 @@ define(function (require) {
                         // free translation
                         // set focus on the FT text area
                         $("#fteditor").focus();
-                        $("#fteditor").mouseup();
+                        $("#fteditor").trigger("mouseup");
                     }
                 }
                 if ($("#mnuTranslations").hasClass("menu-disabled")) {
@@ -2285,7 +2290,7 @@ define(function (require) {
                     console.log("oops... pile selection / user mouseup on target, not pile... correcting.");
                     // trigger a click on the parent (pile) instead
                     event.stopPropagation();
-                    $(event.currentTarget.parentElement).mouseup();
+                    $(event.currentTarget.parentElement).trigger("mouseup");
                     return;
                 }
 
@@ -2647,7 +2652,7 @@ define(function (require) {
                     console.log("oops... pile selection / user mouseup on target, not pile... correcting.");
                     // trigger a click on the parent (pile) instead
                     event.stopPropagation();
-                    $(event.parentElement).mouseup();
+                    $(event.parentElement).trigger("mouseup");
                     return;
                 }
 
@@ -3075,7 +3080,7 @@ define(function (require) {
                 isSelecting = true;
                 selectedStart = lastPile;
                 selectedEnd = lastPile;
-                $(lastPile).mouseup();
+                $(lastPile).trigger("mouseup");
             },
             // User has moved out of the current adaptation input field (blur on target field)
             // this can be called either programatically (tab / shift+tab keydown response) or
@@ -3550,7 +3555,7 @@ define(function (require) {
                     $("#mnuClearFT").prop('disabled', false);
                     // fire a focus event for the FT editor
                     $("#fteditor").focus();
-                    $("#fteditor").mouseup();
+                    $("#fteditor").trigger("mouseup");
                 }
             },
             // User clicked on the Placeholder _before_ button
@@ -3621,7 +3626,7 @@ define(function (require) {
                     $("#mnuPhrase").prop('disabled', true);
                     next_edit = selectedStart.previousElementSibling;
                     selectedStart = next_edit;
-                    $(next_edit).find('.target').mouseup();
+                    $(next_edit).find('.target').trigger("mouseup");
                 } else {
                     // selection is a placeholder -- delete it from the model and the DOM (html)
                     strID = $(selectedStart).attr('id');
@@ -3717,7 +3722,7 @@ define(function (require) {
                     $("#mnuPhrase").prop('disabled', true);
                     next_edit = selectedStart.nextElementSibling;
                     selectedStart = next_edit;
-                    $(next_edit).find('.target').mouseup();
+                    $(next_edit).find('.target').trigger("mouseup");
                 } else {
                     // selection is a placeholder -- delete it from the model and the DOM (html)
                     strID = $(selectedStart).attr('id');
@@ -3931,7 +3936,7 @@ define(function (require) {
                         // start adapting the new Phrase
                         next_edit = $('#pile-phr-' + newID);
                         selectedStart = next_edit;
-                        $(next_edit).find('.target').mouseup();
+                        $(next_edit).find('.target').trigger("mouseup");
                     }});
                     // end post async save() processing on sourcephrase
                 } else {
@@ -4150,7 +4155,7 @@ define(function (require) {
                     // start adapting the new Retranslation
                     next_edit = $('#pile-ret-' + newID);
                     selectedStart = next_edit;
-                    $(next_edit).find('.target').mouseup();
+                    $(next_edit).find('.target').trigger("mouseup");
                 } else {
                     // selection is a retranslation -- delete it from the model and the DOM
                     // first, re-create the original sourcephrase piles and add them to the collection and UI
@@ -5240,7 +5245,7 @@ define(function (require) {
                     idxEnd = idxStart;
                     // select it
                     scrollToView(selectedStart);
-                    $(selectedStart).mouseup();
+                    $(selectedStart).trigger("mouseup");
                 }
             },
                                                    
@@ -5278,7 +5283,7 @@ define(function (require) {
                     idxEnd = idxStart;
                     // select it
                     scrollToView(selectedStart);
-                    $(selectedStart).mouseup();
+                    $(selectedStart).trigger("mouseup");
                 }
             },
                 
