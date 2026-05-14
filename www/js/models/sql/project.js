@@ -8,7 +8,7 @@ define(function (require) {
         Backbone    = require('backbone'),
         i18n        = require('i18n'),
         projects    = [],
-        CURRSCHEMA  = 5,
+        CURRSCHEMA  = 6,
         
         // ---
         // STATIC METHODS
@@ -31,11 +31,7 @@ define(function (require) {
                         console.log("failed to set the version schema");
                     });
                     // does the sourcephrase table already exist? (probably, but just in case)
-                    if (device) {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
-                    } else {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
-                    }
+                    theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
                     tx.executeSql(theSQL, [], function (tx, res) {
                         if (res.rows.length > 0) {
                             // sourcephrase table exists and is populated -- update it
@@ -55,11 +51,7 @@ define(function (require) {
                         console.log("upgradeSchema: error updating sourcephrase table: " + err.message);
                     });
                     // update changes for 1.3 
-                    if (device) {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    } else {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    }
+                    theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
                     tx.executeSql(theSQL, [], function (tx, res) {
                         // If the user has created any KB items (likely), we'll need to add 2 columns;
                         // if there's no KB, it'll create the table with all the needed columns (see targetunit.js)
@@ -95,11 +87,7 @@ define(function (require) {
                     });
                     // update changes for 1.3 
                     // First, check to see if the targetunit table exists
-                    if (device) {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    } else {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    }
+                    theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
                     tx.executeSql(theSQL, [], function (tx, res) {
                         // If the user has created any KB items AND the new columns aren't there, we'll need to add them;
                         // if there's no KB, it'll create the table with all the needed columns (see targetunit.js)
@@ -140,11 +128,7 @@ define(function (require) {
                     });
                     // update changes for 1.6 
                     // First, check to see if the sourcephrase table exists
-                    if (device) {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
-                    } else {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
-                    }
+                    theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
                     tx.executeSql(theSQL, [], function (tx, res) {
                         // If the user has created any sourcephrase items (i.e., they've imported a document) AND the new column isn't there, we'll need to add it;
                         // if there's no sourcephrase table, it'll create the table with all the needed columns (see sourcephrase.js)
@@ -198,11 +182,7 @@ define(function (require) {
                     });
                     // update changes for 1.6 
                     // First, check to see if the sourcephrase table exists
-                    if (device) {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
-                    } else {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
-                    }
+                    theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'sourcephrase\';";
                     tx.executeSql(theSQL, [], function (tx, res) {
                         // If the user has created any sourcephrase items (i.e., they've imported a document) AND the new column isn't there, we'll need to add it;
                         // if there's no sourcephrase table, it'll create the table with all the needed columns (see sourcephrase.js)
@@ -239,11 +219,7 @@ define(function (require) {
                         console.log("upgradeSchema: error: " + err.message);
                     });
                     // AIM 1.8.0 (1 column in targetunit): first see if the targetunit table exists
-                    if (device) {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    } else {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    }
+                    theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
                     tx.executeSql(theSQL, [], function (tx, res) {
                         // If the user has created any KB items AND the new columns aren't there, we'll need to add them;
                         // if there's no KB, it'll create the table with all the needed columns (see targetunit.js)
@@ -280,6 +256,29 @@ define(function (require) {
                         // exception thrown -- assume table doesn't exist
                         console.log("upgradeSchema: error: " + err.message);
                     });
+                    // 1.18 new tables -- user and bookmark
+                    theSQL = 'CREATE TABLE IF NOT EXISTS user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - user table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+                    theSQL = 'CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, name text, bookid text, chapterid text, spid text);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - bookmark table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+                    // 1.21 new table -- sync_log
+                    theSQL = 'CREATE TABLE IF NOT EXISTS sync_log (id INTEGER PRIMARY KEY AUTOINCREMENT, table_name TEXT NOT NULL, row_id TEXT NOT NULL, operation TEXT NOT NULL, data TEXT, timestamp INTEGER NOT NULL, device_id TEXT NOT NULL);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - sync_log table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
                 }, function (e) {
                     console.log("upgradeSchema error: " + e.message);
                 }, function () {
@@ -298,11 +297,7 @@ define(function (require) {
                     });
                     // update changes for 1.8 
                     // First, check to see if the targetunit table exists
-                    if (device) {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    } else {
-                        theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
-                    }
+                    theSQL = "SELECT name FROM sqlite_master WHERE type=\'table\' and name=\'targetunit\';";
                     tx.executeSql(theSQL, [], function (tx, res) {
                         // If the user has created any targetunit items (i.e., they've imported a .tmx file or started adapting) AND the new column isn't there, we'll need to add it;
                         // if there's no targetunit table, it'll create the table with all the needed columns (see targetunit.js)
@@ -338,6 +333,29 @@ define(function (require) {
                         // exception thrown -- assume table doesn't exist
                         console.log("upgradeSchema: error: " + err.message);
                     });
+                    // 1.18 new tables -- user and bookmark
+                    theSQL = 'CREATE TABLE IF NOT EXISTS user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - user table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+                    theSQL = 'CREATE TABLE IF NOT EXISTS bookmark (id integer primary key, bookmarkid text, projectid text, name text, bookid text, chapterid text, spid text);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - bookmark table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+                    // 1.21 new table -- sync_log
+                    theSQL = 'CREATE TABLE IF NOT EXISTS sync_log (id INTEGER PRIMARY KEY AUTOINCREMENT, table_name TEXT NOT NULL, row_id TEXT NOT NULL, operation TEXT NOT NULL, data TEXT, timestamp INTEGER NOT NULL, device_id TEXT NOT NULL);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - sync_log table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
                 }, function (e) {
                     console.log("upgradeSchema error: " + e.message);
                 }, function () {
@@ -354,8 +372,7 @@ define(function (require) {
                     }, function (err) {
                         console.log("failed to set the version schema: " + err);
                     });
-                    // update changes for 1.18
-                    // 2 new tables -- user and bookmark
+                    // 1.18 new tables -- user and bookmark
                     theSQL = 'CREATE TABLE IF NOT EXISTS user (id integer primary key, username text, userid text, roles text, CopySource integer, WrapUSFM integer, StopAtBoundaries integer, AllowEditBlankSP integer, ShowTranslationChecks integer, DefaultFTTarget integer, UILang integer, DarkMode integer, bookmarks Text, WordSpacing integer);';
                     tx.executeSql(theSQL, [], function (tx, res) {
                         console.log("upgradeSchema() - user table created");
@@ -370,7 +387,38 @@ define(function (require) {
                         // exception thrown -- assume table doesn't exist
                         console.log("upgradeSchema: error: " + err.message);
                     });
-
+                    // 1.21 new table -- sync_log
+                    theSQL = 'CREATE TABLE IF NOT EXISTS sync_log (id INTEGER PRIMARY KEY AUTOINCREMENT, table_name TEXT NOT NULL, row_id TEXT NOT NULL, operation TEXT NOT NULL, data TEXT, timestamp INTEGER NOT NULL, device_id TEXT NOT NULL);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - sync_log table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
+                }, function (e) {
+                    console.log("upgradeSchema error: " + e.message);
+                }, function () {
+                    deferred.resolve();
+                });
+            }
+            if (fromVersion === 5) {
+                // AIM version 1.21 (sync_log table)
+                window.Application.db.transaction(function (tx) {
+                    var theSQL = "";
+                    // version table exists (see logic above), but is at version 4; update it here
+                    tx.executeSql('UPDATE version SET schemaver=? WHERE id=?;', [CURRSCHEMA, 1], function (tx, res) {
+                        console.log("version table updated -- schema version: " + CURRSCHEMA);
+                    }, function (err) {
+                        console.log("failed to set the version schema: " + err);
+                    });
+                    // 1.21 new table -- sync_log
+                    theSQL = 'CREATE TABLE IF NOT EXISTS sync_log (id INTEGER PRIMARY KEY AUTOINCREMENT, table_name TEXT NOT NULL, row_id TEXT NOT NULL, operation TEXT NOT NULL, data TEXT, timestamp INTEGER NOT NULL, device_id TEXT NOT NULL);';
+                    tx.executeSql(theSQL, [], function (tx, res) {
+                        console.log("upgradeSchema() - sync_log table created");
+                    }, function (err) {
+                        // exception thrown -- assume table doesn't exist
+                        console.log("upgradeSchema: error: " + err.message);
+                    });
                 }, function (e) {
                     console.log("upgradeSchema error: " + e.message);
                 }, function () {
@@ -917,23 +965,25 @@ define(function (require) {
                 console.log("destroy() - removing project: " + attributes.projectid);
                 window.Application.db.transaction(function (tx) {
                     // get the books associated with this projectid
-                    tx.executeSql("SELECT * FROM project WHERE projectid=?;", [attributes.projectid], function (tx, res) {
-                        var projidx = 0,
-                            projlen = 0;
-                        for (projidx = 0, projlen = res.rows.length; projidx < projlen; ++projidx) {
+                    tx.executeSql("SELECT * FROM book WHERE projectid=?;", [attributes.projectid], function (tx, res) {
+                        var bookidx = 0,
+                            booklen = 0;
+                        for (bookidx = 0, booklen = res.rows.length; bookidx < booklen; ++bookidx) {
                             // get the chapters associated with this bookid
-                            var bookid = res.rows.item(projidx).bookid;
+                            var bookid = res.rows.item(bookidx).bookid;
                             tx.executeSql("SELECT * FROM chapter WHERE bookid=?;", [bookid], function (tx, res) {
                                 // for each chapter, delete the sourcephrases associated with the chapterid - then delete the chapter
                                 var i = 0,
                                     len = 0;
                                 for (i = 0, len = res.rows.length; i < len; ++i) {
-                                    window.Application.db.transaction(function (tx) {
-                                        var chapterid = res.rows.item(i).chapterid;
-                                        tx.executeSql("DELETE FROM sourcephrase WHERE chapterid=?", [chapterid], function (tx, res) {
-                                            console.log("DELETE sourcephrases ok: " + res.toString());
-                                        });
-                                    });                    
+                                    (function (chapterid) {
+                                        window.Application.db.transaction(function (tx) {
+                                            var chapterid = res.rows.item(i).chapterid;
+                                            tx.executeSql("DELETE FROM sourcephrase WHERE chapterid=?", [chapterid], function (tx, res) {
+                                                console.log("DELETE sourcephrases ok: " + res.toString());
+                                            });
+                                        });                    
+                                    }(res.rows.item(i).chapterid));
                                 }
                                 // delete the chapters
                                 tx.executeSql("DELETE FROM chapter WHERE bookid=?", [bookid], function (tx, res) {
@@ -958,6 +1008,9 @@ define(function (require) {
                 }, function (e) {
                     deferred.reject(e);
                 }, function () {
+                    // remove project from local cache
+                    var idx = projects.indexOf(this);
+                    if (idx > -1) { projects.splice(idx, 1); }
                     deferred.resolve();
                 });
                 return deferred.promise();
@@ -970,7 +1023,7 @@ define(function (require) {
                     break;
                         
                 case 'read':
-                    findById(this.projectid).done(function (data) {
+                    findById(this.attributes.projectid).done(function (data) {
                         options.success(data);
                     });
                     break;
@@ -1045,7 +1098,7 @@ define(function (require) {
                     });
                 }, function (err) {
                     console.log("DELETE error: " + err.message);
-                    deferred.reject(e);
+                    deferred.reject(err);
                 }, function () { // TODO: do we need this one?
                     deferred.resolve();
                 });
